@@ -1,7 +1,7 @@
 // Service Worker: App-Hülle für den Offline-Start.
 // Bei jeder Änderung an den Dateien unten VERSION hochzählen.
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `gcad-kapazitaet-${VERSION}`;
 
 const HUELLE = [
@@ -18,6 +18,13 @@ const HUELLE = [
   './js/kern/datum.js',
   './js/kern/daten.js',
   './js/kern/beispiel.js',
+  './js/kern/index.js',
+  './js/kern/feiertage.js',
+  './js/kern/kapazitaet.js',
+  './js/kern/planung.js',
+  './js/kern/vorschlaege.js',
+  './js/kern/anfrage.js',
+  './js/kern/lernwert.js',
   './js/ansichten/platzhalter.js',
   './js/ansichten/einstellungen.js',
   './schrift/inter-latin-wght-normal.woff2',

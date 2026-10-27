@@ -41,11 +41,11 @@ export function beispielDaten() {
   });
   projekt('bar', {
     nr: '26-047', name: 'Gastro Getränkebar', kunde: 'Gasthaus Beispiel', art: 'Werkplanung',
-    status: 'auftrag', schaetzungH: 49, start: '2026-11-02', deadline: '2026-12-11', farbe: '#B4C3CC',
+    status: 'auftrag', schaetzungH: 57, start: '2026-11-02', deadline: '2026-12-11', farbe: '#B4C3CC',
     positionen: [
       { nr: '1', bezeichnung: 'Theke', sollH: 24 },
       { nr: '2', bezeichnung: 'Rückbuffet', sollH: 16 },
-      { nr: '3', bezeichnung: 'Werkplanung komplett', sollH: 9 },
+      { nr: '3', bezeichnung: 'Werkplanung komplett', sollH: 17 },
     ],
   });
 
@@ -94,4 +94,29 @@ export function beispielDaten() {
   d.abwesenheiten.push({ id: neueId(), von: '2026-12-28', bis: '2027-01-01', art: 'urlaub' });
 
   return d;
+}
+
+/** Beispieltermine, wie sie später aus dem Kalender-JSON kommen (nur für die Beispieldaten). */
+export function beispielTermine() {
+  const t = (kalender, tag, von, bis, titel) => ({
+    uid: `beispiel-${tag}-${von}`, kalender, titel, ganztaegig: false,
+    start: `${tag}T${von}`, ende: `${tag}T${bis}`,
+  });
+  const g = (kalender, tag, bisExkl, titel) => ({ uid: `beispiel-${tag}-ganz`, kalender, titel, ganztaegig: true, start: tag, ende: bisExkl });
+  return [
+    t('Gerster CAD', '2026-10-26', '10:00', '11:00', 'Telefonat Gasthaus Beispiel'),
+    t('Gerster CAD', '2026-10-28', '09:00', '12:00', 'Baustellentermin Getränkebar'),
+    t('Gerster CAD', '2026-10-29', '14:00', '15:00', 'Abstimmung Kanzlei Muster'),
+    t('Privat', '2026-10-29', '18:00', '20:00', 'Sport'),
+    t('Gerster CAD', '2026-11-03', '09:00', '11:00', 'Aufmaß Frankfurt'),
+    t('Gerster CAD', '2026-11-05', '13:00', '15:00', 'Werkstattbesuch Schreinerei'),
+    g('Familie', '2026-11-07', '2026-11-08', 'Geburtstag'),
+    t('Gerster CAD', '2026-11-10', '10:00', '12:00', 'Abstimmung Frankfurt'),
+    t('Gerster CAD', '2026-11-16', '08:00', '11:00', 'Baustellentermin Kanzlei'),
+    t('Gerster CAD', '2026-11-19', '14:00', '16:00', 'Abnahme Entwurf Getränkebar'),
+    t('Gerster CAD', '2026-11-24', '09:00', '12:00', 'Messe Holz und Handwerk'),
+    t('Gerster CAD', '2026-12-01', '10:00', '12:00', 'Erstgespräch Rösterei'),
+    t('Gerster CAD', '2026-12-09', '14:00', '16:00', 'Steuerberater'),
+    t('Gerster CAD', '2026-12-15', '09:00', '13:00', 'Jahresgespräch Kunden'),
+  ];
 }

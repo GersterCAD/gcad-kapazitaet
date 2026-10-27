@@ -35,6 +35,17 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026.
 - `js/austausch.js`: Export `kapazitaet-daten.json` (legt vorher automatisch eine Sicherung im Browser an), Import nur nach erfolgreicher Prüfung, alter Stand wird vorher gesichert.
 - Beispieldaten: `js/kern/beispiel.js`, nur erfundene Namen. Beim allerersten Start aktiv, in Einstellungen → Daten abschaltbar. Kopfzeile zeigt dann den Chip „Beispieldaten“.
 - Tests: `npm test` (Node, keine Abhängigkeiten).
+
+## Rechenkern (`js/kern/`, Einstieg `index.js`)
+
+- `feiertage.js`: Feiertage BW je Jahr, Ostersonntag nach Gauß.
+- `kapazitaet.js`: `tagesRechner()` – Tageskapazität = Regeltag (0 an Wochenende, Feiertag, Urlaub) − Blockzeiten − Termine nach Kalenderregel (`alle` | `ganztaegig` | `ignorieren`, `terminRegeln[uid].zaehltH` ersetzt Stunden). Ganztägige Termine belegen den ganzen Tag. Übernommene Vorschläge (Samstag, langer Tag, Kürzung) wirken hier.
+- `planung.js`: `plane(daten, { heute, termine })` plant feste Projekte (Auftrag, läuft): fixierte Einplanungen zuerst, dann früheste Deadline → Priorität → Start, so früh wie möglich in die freie Zeit. Reicht es bis zur Deadline nicht: Rest als **Überlast** gleichmäßig vor der Deadline bis zum längsten Tag (Status `knapp`) – kein geplanter langer Tag, sondern ein Engpass, der Vorschläge auslöst. Reicht auch das nicht: regulär über die Deadline hinaus (`zuSpaet`). Vergangene Tage zeigen die gebuchte Zeit. `wochen()` fasst für Diagramm und Warnung zusammen, `warnung()`, `kennzahlen()`.
+- `vorschlaege.js`: je Projekt mit Engpass in dieser Reihenfolge: verschieben (fixierte Einplanungen anderer Projekte, deren Deadline hält) → Entwicklung kürzen → Samstage → längere Tage. Jeder Vorschlag wird durchgerechnet (`loest`, `warnungDanach`). `uebernehmen()` legt ihn in `vorschlaegeUebernommen` ab, `rueckgaengig()` nimmt ihn heraus. Nie automatisch.
+- `anfrage.js`: `anfragePruefen()` – drei Varianten (Regulär, Samstage, Längere Tage) mit den heute freien Stunden, ohne bestehende Projekte zu verschieben. Fertigtag: freie Stunden einer Woche gleichmäßig auf ihre Arbeitstage. Empfohlen = erste Variante, die den Wunschtermin hält.
+- `lernwert.js`: Mittel aus (Ist − Schätzung) / Schätzung je Projektart, ab 3 abgeschlossenen Projekten.
+- Beispieltermine (`beispielTermine()` in `beispiel.js`) ersetzen bei den Beispieldaten das Kalender-JSON. Die Beispieldaten sind so gewählt, dass die Anfrage aus dem Entwurf (56 h + 10 % ab KW 49) am Do 17.12.2026 fertig ist – bei Änderungen an `beispiel.js` den Test laufen lassen.
+- Ergänzung zur Datenstruktur: Einplanungen haben eine `id` (für „verschieben“).
 - PWA: `manifest.json`, `sw.js` (Netz zuerst, ohne Netz aus dem Cache). **Bei jeder neuen oder geänderten Datei `VERSION` in `sw.js` hochzählen und die Datei in `HUELLE` eintragen.**
 - Schrift: Inter als woff2 in `schrift/` (OFL), nicht von Google laden. Bildzeichen in `bilder/`.
 - Lokal starten: `python3 -m http.server 8130` im Repo, dann http://localhost:8130.
