@@ -1,0 +1,67 @@
+/* Aufbau der App: Kopfzeile, Bereiche, Inhalt. Maße nach Entwurf Index A (8er-Schritte). */
+
+.app { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+
+/* Kopfzeile */
+.kopf {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  min-height: 56px; padding: 8px 24px;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+  padding-top: max(8px, env(safe-area-inset-top));
+  border-bottom: 1px solid var(--linie); background: var(--weiss);
+}
+.kopf-marke { display: flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--text); }
+.kopf-marke:hover { color: var(--text); }
+.kopf-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.kopf-zusatz { font-size: 11px; color: var(--text-2); }
+.kopf-trenner { width: 1px; height: 16px; background: var(--linie); }
+.kopf-kontext { font-size: 13px; }
+.kopf-status { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
+.kopf-aktionen { display: flex; gap: 16px; flex-wrap: wrap; }
+
+/* Bereiche */
+.bereiche {
+  display: flex; gap: 4px; padding: 8px 24px;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+  border-bottom: 1px solid var(--linie); overflow-x: auto; scrollbar-width: none;
+}
+.bereiche::-webkit-scrollbar { display: none; }
+.bereiche a {
+  position: relative; display: inline-flex; align-items: center;
+  height: 32px; padding: 0 16px; border-radius: var(--radius-pille);
+  font-size: 13px; color: var(--text); text-decoration: none; white-space: nowrap;
+}
+.bereiche a::after { content: ""; position: absolute; left: 0; right: 0; top: -6px; bottom: -6px; }
+.bereiche a:hover { background: var(--leiste); }
+.bereiche a[aria-current="page"] { background: var(--leiste); font-weight: 600; }
+
+/* Inhalt */
+.inhalt {
+  flex: 1; width: 100%; max-width: 1360px; margin: 0 auto;
+  padding: 32px 24px 64px;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+  padding-bottom: max(64px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 24px;
+}
+.inhalt:focus { outline: none; }
+
+.seitenkopf { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.seitenkopf > div:first-child { flex: 1; min-width: 240px; }
+.seitenkopf h1 { margin-top: 8px; }
+
+.platzhalter { display: flex; flex-direction: column; gap: 8px; }
+.platzhalter p { margin: 0; font-size: 14px; color: var(--text-2); max-width: 60ch; }
+
+/* Handybreite: Abstände enger, Überschrift kleiner */
+@media (max-width: 640px) {
+  .kopf, .bereiche { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .kopf { gap: 8px 16px; }
+  .kopf-aktionen { width: 100%; gap: 8px; }
+  .kopf-aktionen .pille { flex: 1; }
+  .inhalt { padding: 24px 16px 48px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  h1, .titel-1 { font-size: 26px; }
+  .kopf-trenner { display: none; }
+}

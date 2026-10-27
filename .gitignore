@@ -1,0 +1,4 @@
+# Echte Daten nie ins öffentliche Repo
+kapazitaet-daten*.json
+*.ics
+.DS_Store

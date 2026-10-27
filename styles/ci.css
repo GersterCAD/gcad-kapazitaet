@@ -1,0 +1,128 @@
+/* Kapazität – Gestaltung nach CI Gerster CAD 1.6 und Claude Design Index A (27.10.2026).
+   Graphit auf Weiß/Hellgrau, eine Linienfarbe, Stahlblau als einzige Akzentfarbe.
+   Keine Verläufe, keine Schatten (außer schwebend), keine Kursiven. */
+
+@font-face {
+  font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("../schrift/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("../schrift/inter-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  --text: #1D1D1F;        /* Graphit: Text, Kapazitätslinie, gewählte Pillen */
+  --text-2: #6E6E73;      /* Grau: Nebentext, Labels */
+  --text-3: #3A3A3C;
+  --linie: #D2D2D7;       /* Trennlinien, Rahmen */
+  --leiste: #F5F5F7;      /* Hellgrau: Kacheln, Seitenspalten, Eingabebereich */
+  --weiss: #FFFFFF;
+  --termin: #A1A1A6;      /* Termine aus dem Kalender */
+
+  --greige: #D6D1CA;      /* Blockzeit Büro */
+  --greige-hell: #ECE9E4; /* Blockzeit Entwicklung */
+
+  --stahl: #445F6E;       /* einzige Akzentfarbe: Haupt-Button, Links, Projektbalken */
+  --stahl-dunkel: #2F4450;
+  --stahl-mittel: #7C93A0;
+  --stahl-hell: #B4C3CC;
+
+  --gruen: #1E7D3C; --gruen-bg: #EAF4EC;  /* im Plan */
+  --gelb: #6B4500;  --gelb-bg: #FFEFC2;   /* knapp, Warnung */
+  --rot: #A1261B;   --rot-bg: #FBE9E7;    /* zu spät */
+
+  --radius-karte: 12px;
+  --radius-feld: 8px;
+  --radius-pille: 999px;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--weiss);
+  -webkit-font-smoothing: antialiased;
+  font-synthesis: none;
+}
+
+button, input, select, textarea { font-family: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--stahl); }
+a:hover { color: var(--stahl-dunkel); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--stahl); outline-offset: 2px;
+}
+
+.zahl { font-variant-numeric: tabular-nums; }
+.sekundaer { color: var(--text-2); }
+.fuellung { flex: 1; }
+.nur-vorleser { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Label: Versalien, gesperrt */
+.label {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-2);
+}
+
+h1, .titel-1 { margin: 0; font-size: 32px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
+h2, .titel-2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
+
+/* Pillen-Buttons: vollständig gerundet, 32 px sichtbar, Klickfläche 44 px */
+.pille {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 32px; padding: 0 16px;
+  border: 1px solid var(--linie); border-radius: var(--radius-pille);
+  background: var(--weiss); color: var(--text);
+  font-size: 12px; font-weight: 500; line-height: 1; text-decoration: none; white-space: nowrap;
+}
+.pille::after { content: ""; position: absolute; left: 0; right: 0; top: -6px; bottom: -6px; }
+.pille:hover { background: var(--leiste); color: var(--text); }
+.pille.haupt { border-color: var(--stahl); background: var(--stahl); color: var(--weiss); }
+.pille.haupt:hover { border-color: var(--stahl-dunkel); background: var(--stahl-dunkel); color: var(--weiss); }
+.pille.leise { border-color: transparent; background: transparent; color: var(--stahl); padding: 0 12px; }
+.pille svg { flex: none; }
+
+/* Umschalter (Zeitraum u. ä.) */
+.umschalter { display: inline-flex; gap: 4px; padding: 4px; border-radius: var(--radius-pille); background: var(--leiste); }
+.umschalter button {
+  position: relative; height: 28px; padding: 0 16px; border: 0; border-radius: var(--radius-pille);
+  background: transparent; font-size: 12px;
+}
+.umschalter button::after { content: ""; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
+.umschalter button[aria-pressed="true"] { background: var(--weiss); box-shadow: 0 0 0 1px var(--linie); font-weight: 600; }
+
+/* Statuschips */
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: var(--radius-pille);
+  font-size: 11px; font-weight: 500; line-height: 1.4; white-space: nowrap;
+  background: var(--leiste); color: var(--text-3);
+}
+.chip.gruen { background: var(--gruen-bg); color: var(--gruen); }
+.chip.gelb { background: var(--gelb-bg); color: var(--gelb); }
+.chip.rot { background: var(--rot-bg); color: var(--rot); }
+
+/* Punkt für Statusanzeigen */
+.punkt { width: 8px; height: 8px; border-radius: 50%; background: var(--termin); flex: none; }
+.punkt.gruen { background: var(--gruen); }
+.punkt.gelb { background: var(--gelb); }
+.punkt.rot { background: var(--rot); }
+
+/* Karten */
+.karte { padding: 24px; border: 1px solid var(--linie); border-radius: var(--radius-karte); background: var(--weiss); }
+.kachel { padding: 24px; border-radius: var(--radius-karte); background: var(--leiste); }
+
+/* Eingabefelder */
+.feld {
+  height: 40px; padding: 0 12px; border: 1px solid var(--linie); border-radius: var(--radius-feld);
+  background: var(--weiss); font-size: 14px;
+}
