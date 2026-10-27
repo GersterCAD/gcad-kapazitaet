@@ -29,6 +29,12 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026.
 - `js/app.js`: Kopfzeile, Navigation, Bereiche über die Adresse (`#/uebersicht`, `#/projekte`, `#/anfragen`, `#/kalender`, `#/einstellungen`).
 - `js/kern/`: Rechenkern **ohne Oberfläche** (kein DOM, kein `window`), damit er später in Werk.ai eingebunden werden kann. Tests in `tests/`.
 - `js/ansichten/`: je Bereich ein Modul. `js/ui.js`: kleine DOM-Hilfen (`el()`).
+- Daten: `js/kern/daten.js` (Struktur `schemaVersion: 1`, `leereDaten()`, `pruefeDaten()` für Laden/Import, berechnet `soll()`, `ist()`, `rest()`). Neue Version → `SCHEMA_VERSION` hochzählen und in `migriere()` umrechnen.
+  - Ergänzungen zur Anweisung: Blockzeit hat `art` (`buero` | `entwicklung`, für die Farbe im Diagramm), `wochentag` ist eine Liste (1 = Mo … 6 = Sa), z. B. Entwicklung Mo und Mi = `[1, 3]`.
+- `js/zustand.js`: aktiver Datensatz im Speicher, Änderungen nur über `aendern(fn)` (speichert sofort, meldet an die Ansichten). `js/speicher.js`: IndexedDB `gcad-kapazitaet` mit den Datensätzen `echt` und `beispiel` (mischen sich nie), `meta`, `sicherungen` (letzte 20).
+- `js/austausch.js`: Export `kapazitaet-daten.json` (legt vorher automatisch eine Sicherung im Browser an), Import nur nach erfolgreicher Prüfung, alter Stand wird vorher gesichert.
+- Beispieldaten: `js/kern/beispiel.js`, nur erfundene Namen. Beim allerersten Start aktiv, in Einstellungen → Daten abschaltbar. Kopfzeile zeigt dann den Chip „Beispieldaten“.
+- Tests: `npm test` (Node, keine Abhängigkeiten).
 - PWA: `manifest.json`, `sw.js` (Netz zuerst, ohne Netz aus dem Cache). **Bei jeder neuen oder geänderten Datei `VERSION` in `sw.js` hochzählen und die Datei in `HUELLE` eintragen.**
 - Schrift: Inter als woff2 in `schrift/` (OFL), nicht von Google laden. Bildzeichen in `bilder/`.
 - Lokal starten: `python3 -m http.server 8130` im Repo, dann http://localhost:8130.

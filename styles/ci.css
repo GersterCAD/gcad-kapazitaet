@@ -126,3 +126,16 @@ h2, .titel-2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.
   height: 40px; padding: 0 12px; border: 1px solid var(--linie); border-radius: var(--radius-feld);
   background: var(--weiss); font-size: 14px;
 }
+
+/* Schalter (aus dem Entwurf: 52 × 32, Knopf schwebt) */
+.schalter {
+  position: relative; flex: none; width: 52px; height: 32px; padding: 0; border: 0;
+  border-radius: var(--radius-pille); background: var(--linie);
+}
+.schalter::after { content: ""; position: absolute; left: 0; right: 0; top: -6px; bottom: -6px; }
+.schalter span {
+  position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--weiss); box-shadow: 0 1px 3px rgba(29, 29, 31, 0.2);
+}
+.schalter[aria-checked="true"] { background: var(--stahl); }
+.schalter[aria-checked="true"] span { left: 23px; }

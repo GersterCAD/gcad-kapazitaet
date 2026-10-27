@@ -4,6 +4,8 @@
 import { el, plusIcon } from './ui.js';
 import { isoWoche, tagLang } from './kern/datum.js';
 import { platzhalter } from './ansichten/platzhalter.js';
+import { einstellungen } from './ansichten/einstellungen.js';
+import * as zustand from './zustand.js';
 
 const BEREICHE = [
   { id: 'uebersicht', name: 'Übersicht' },
@@ -71,11 +73,7 @@ const ANSICHTEN = {
     bereich: 'einstellungen',
     kontext: 'Einstellungen',
     status: 'Änderungen gelten sofort für die Planung',
-    inhalt: platzhalter({
-      label: 'Einstellungen',
-      titel: 'Kapazität und Regeln',
-      text: 'Regeltag, Blockzeiten, Urlaub, Kalender und Datenabgleich. Das folgt in Schritt 4.',
-    }),
+    inhalt: einstellungen(),
   }),
 };
 
@@ -95,6 +93,7 @@ function kopfzeile(a) {
     ]),
     el('div', { class: 'kopf-trenner', 'aria-hidden': 'true' }),
     el('div', { class: 'kopf-kontext' }, a.kontext),
+    zustand.istBeispiel() ? el('a', { class: 'chip', href: '#/einstellungen', title: 'Beispieldaten in den Einstellungen abschalten' }, 'Beispieldaten') : null,
     el('div', { class: 'fuellung' }),
     a.kalenderStatus ? kalenderStatus() : null,
     a.status ? el('span', { class: 'kopf-status' }, a.status) : null,
@@ -121,11 +120,13 @@ function zeigen() {
   const app = document.getElementById('app');
   const inhalt = el('main', { class: 'inhalt', id: 'inhalt', tabindex: '-1' }, ansicht.inhalt);
   app.replaceChildren(kopfzeile(ansicht), navigation(ansicht.bereich), inhalt);
-  window.scrollTo(0, 0);
 }
 
-window.addEventListener('hashchange', zeigen);
-zeigen();
+window.addEventListener('hashchange', () => { zeigen(); window.scrollTo(0, 0); });
+zustand.abonnieren(zeigen);
+zustand.starten()
+  .catch((f) => console.error('Daten konnten nicht geladen werden:', f))
+  .finally(zeigen);
 
 // Offline-Start: Service Worker nur über https oder localhost.
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

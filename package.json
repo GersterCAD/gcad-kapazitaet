@@ -1,0 +1,9 @@
+{
+  "name": "gcad-kapazitaet",
+  "private": true,
+  "type": "module",
+  "description": "Kapazitätsplanung Gerster CAD. Kein Build-Schritt, keine Abhängigkeiten. Nur für die Tests.",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

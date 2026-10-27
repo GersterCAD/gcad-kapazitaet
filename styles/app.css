@@ -17,6 +17,8 @@
 .kopf-zusatz { font-size: 11px; color: var(--text-2); }
 .kopf-trenner { width: 1px; height: 16px; background: var(--linie); }
 .kopf-kontext { font-size: 13px; }
+a.chip { text-decoration: none; }
+a.chip:hover { color: var(--text); }
 .kopf-status { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
 .kopf-aktionen { display: flex; gap: 16px; flex-wrap: wrap; }
 
@@ -54,6 +56,31 @@
 
 .platzhalter { display: flex; flex-direction: column; gap: 8px; }
 .platzhalter p { margin: 0; font-size: 14px; color: var(--text-2); max-width: 60ch; }
+
+/* Seiten mit Karten */
+.seite { display: flex; flex-direction: column; gap: 24px; }
+.mit-abstand { margin-top: 8px; }
+.mit-abstand-gross { margin-top: 24px; }
+h1.mit-abstand { margin-top: 8px; }
+.einleitung { margin: 8px 0 0; font-size: 17px; line-height: 1.5; color: var(--text-2); }
+.raster-karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 24px; align-items: start; }
+
+/* Zeilen in Karten (Einstellungen) */
+.zeile { display: flex; align-items: center; gap: 16px; min-height: 64px; padding: 8px 0; border-bottom: 1px solid var(--leiste); }
+.zeile.schmal { min-height: 56px; }
+.zeile.ohne-linie { border-bottom: 0; }
+.zeile > .fuellung { min-width: 0; }
+.zeile-titel { font-size: 14px; font-weight: 500; }
+.zeile-text { font-size: 13px; }
+.zeile-hinweis { margin: 2px 0 0; font-size: 12px; color: var(--text-2); line-height: 1.5; }
+p.zeile-hinweis { margin-top: 8px; }
+.kachel.klein { padding: 16px; margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.knopfreihe { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.kachel.klein > .knopfreihe:first-child { margin-top: 0; }
+.fehlerliste { margin: 8px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.meldung:empty { display: none; }
+.meldung { margin-top: 16px; font-size: 13px; color: var(--text-2); }
+.meldung.gruen { color: var(--gruen); }
 
 /* Handybreite: Abstände enger, Überschrift kleiner */
 @media (max-width: 640px) {
