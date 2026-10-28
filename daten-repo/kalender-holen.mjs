@@ -16,7 +16,7 @@ const fenster = { von: tag(new Date(heute.getTime() - 60 * 86400000)), bis: tag(
 
 let quellen;
 try { quellen = JSON.parse(process.env.KALENDER_QUELLEN || '[]'); } catch { console.error('KALENDER_QUELLEN ist kein gültiges JSON.'); process.exit(1); }
-if (!quellen.length) { console.error('KALENDER_QUELLEN ist leer.'); process.exit(1); }
+if (!quellen.length) { console.log('Noch keine Kalender eingetragen (Secret KALENDER_QUELLEN fehlt).'); process.exit(0); }
 
 let alt = null;
 try { alt = JSON.parse(await readFile(ZIEL, 'utf8')); } catch { /* erste Ausführung */ }
