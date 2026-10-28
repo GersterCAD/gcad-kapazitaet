@@ -2,8 +2,9 @@
 // (Stunden oder Pauschal), Summen, Annahme als Auftrag. Ohne Oberfläche, ohne DOM.
 //
 // Zwei Puffer (Joachims Entscheidung vom 28.10.2026):
-//  1. Puffer je Angebotsposition = die Zulagen aus der Angebotsplanung (Kommunikation, Rücksprachen, Risiko,
-//     Rückläufer). Grund + Puffer = geplante Stunden = Soll der Projektposition.
+//  1. Zulagen am Angebot wie im Kalkulator, einzeln schaltbar: feste Stunden (Auftrag anlegen 1 h, Materialeinstellungen 1 h)
+//     und Prozent auf die Grundstunden (Kommunikation 3 %, Rücksprachen 8 %, Risiko 5 %, Rückläufer 20 %).
+//     Sie werden nach dem Stundenanteil auf die Positionen verteilt. Grund + Zulagen = geplante Stunden = Soll der Projektposition.
 //  2. Planungspuffer 0–20 % beim Einplanen = Puffer des Projekts, kommt auf das Soll obendrauf. 0 % ist erlaubt.
 
 import { neueId, STATUS_FEST } from './daten.js';
@@ -15,8 +16,16 @@ export const ANGEBOT_STATUS_NAME = { entwurf: 'Entwurf', versendet: 'versendet',
 export const PROJEKTARTEN = ['Aufmaß', 'Entwurf', 'Werkplanung', 'Konstruktion'];
 export const MWST = 0.19;
 export const GUELTIG_TAGE = 30;
-/** Vorgabe für den Puffer einer neuen Position: die Zulagen aus dem Kalkulator (3 + 8 + 5 + 20 %) */
-export const STANDARD_POSITIONSPUFFER = 36;
+/** Zulagen aus dem Kalkulator. Vorlage für neue Angebote, änderbar in den Einstellungen (einstellungen.angebotZulagen). */
+export const STANDARD_ZULAGEN = [
+  { name: 'Auftrag anlegen', art: 'fest', wert: 1, an: true },
+  { name: 'Materialeinstellungen', art: 'fest', wert: 1, an: true },
+  { name: 'Kommunikation / Mails', art: 'prozent', wert: 3, an: true },
+  { name: 'Rücksprachen', art: 'prozent', wert: 8, an: true },
+  { name: 'Kalk. Risiko', art: 'prozent', wert: 5, an: true },
+  { name: 'Rückläufer / Änderungen', art: 'prozent', wert: 20, an: true },
+];
+export const neueZulagen = (vorlage = STANDARD_ZULAGEN) => vorlage.map((z) => ({ ...z, id: neueId() }));
 
 const runde2 = (x) => Math.round(x * 100) / 100;
 const runde1 = (x) => Math.round(x * 10) / 10;
@@ -35,6 +44,7 @@ export function neuesAngebot(daten, heute) {
   return {
     id: neueId(), nummer: naechsteNummer(daten, heute), datum: heute, gueltigBis: alsText(plusTage(ausText(heute), GUELTIG_TAGE)),
     kunde: '', projektname: '', art: '', status: 'entwurf', stundensatz: null, pufferImPreis: true,
+    zulagen: neueZulagen(daten.einstellungen?.angebotZulagen ?? STANDARD_ZULAGEN),
     kopftext: '', fusstext: '', zahlungsbedingungen: '', positionen: [neuePosition()],
     projektId: null, angenommenAm: null, lexwareId: null,
   };
@@ -42,15 +52,26 @@ export function neuesAngebot(daten, heute) {
 
 export function neuePosition(werte = {}) {
   return {
-    id: neueId(), bezeichnung: '', beschreibung: '', grundH: 0,
-    puffer: STANDARD_POSITIONSPUFFER, pufferEinheit: '%', abrechnung: 'stunden', pauschalpreis: null, ...werte,
+    id: neueId(), bezeichnung: '', beschreibung: '', grundH: 0, abrechnung: 'stunden', pauschalpreis: null, ...werte,
   };
 }
 
-/** Puffer einer Position in Stunden */
-export const pufferH = (pos) => runde2(pos.pufferEinheit === 'h' ? pos.puffer || 0 : (pos.grundH || 0) * (pos.puffer || 0) / 100);
-/** Geplante Stunden = Grund + Puffer */
-export const geplantH = (pos) => runde2((pos.grundH || 0) + pufferH(pos));
+export const grundGesamt = (a) => a.positionen.reduce((s, p) => s + (p.grundH || 0), 0);
+
+/** Zulagen mit ihren Stunden: [{ ...zulage, h }] (ausgeschaltete mit h = 0) */
+export function zulagenListe(a) {
+  const grund = grundGesamt(a);
+  return (a.zulagen ?? []).map((z) => ({ ...z, h: !z.an ? 0 : runde2(z.art === 'fest' ? z.wert || 0 : grund * (z.wert || 0) / 100) }));
+}
+export const zulagenGesamt = (a) => runde2(zulagenListe(a).reduce((s, z) => s + z.h, 0));
+
+/** Zulagen einer Position in Stunden: Anteil nach Grundstunden */
+export function pufferH(pos, a) {
+  const grund = grundGesamt(a);
+  return grund > 0 ? runde2(((pos.grundH || 0) / grund) * zulagenGesamt(a)) : 0;
+}
+/** Geplante Stunden = Grund + Zulagenanteil */
+export const geplantH = (pos, a) => runde2((pos.grundH || 0) + pufferH(pos, a));
 
 /** Stundensatz: am Angebot eingetragen, sonst vom Kunden. { satz, quelle: 'angebot' | 'kunde' | null } */
 export function angebotSatz(daten, a) {
@@ -60,11 +81,11 @@ export function angebotSatz(daten, a) {
   return { satz: null, quelle: null };
 }
 
-/** Betrag einer Position: Pauschalpreis, sonst Satz × Stunden (mit oder ohne Puffer) */
-export function positionsBetrag(pos, satz, pufferImPreis = true) {
+/** Betrag einer Position: Pauschalpreis, sonst Satz × Stunden (mit oder ohne Zulagen) */
+export function positionsBetrag(pos, satz, a) {
   if (pos.abrechnung === 'pauschal') return pos.pauschalpreis ?? 0;
   if (!satz) return 0;
-  return runde2((pufferImPreis ? geplantH(pos) : pos.grundH || 0) * satz);
+  return runde2((a.pufferImPreis !== false ? geplantH(pos, a) : pos.grundH || 0) * satz);
 }
 
 /** Summen eines Angebots */
@@ -73,9 +94,9 @@ export function summen(daten, a) {
   let grund = 0, puffer = 0, netto = 0;
   for (const p of a.positionen) {
     grund += p.grundH || 0;
-    puffer += pufferH(p);
-    netto += positionsBetrag(p, satz, a.pufferImPreis);
+    netto += positionsBetrag(p, satz, a);
   }
+  puffer = zulagenGesamt(a);
   const geplant = grund + puffer;
   netto = runde2(netto);
   const mwst = runde2(netto * MWST);
@@ -117,8 +138,8 @@ export function angebotAnnehmen(daten, angebotId, { positionIds, start = '', dea
   const { satz } = angebotSatz(daten, a);
   const allePauschal = gewaehlt.length > 0 && gewaehlt.every((p) => p.abrechnung === 'pauschal');
   const positionen = gewaehlt.map((p, i) => ({
-    nr: String(i + 1), bezeichnung: p.bezeichnung || `Position ${i + 1}`, sollH: runde1(geplantH(p)),
-    angebotPositionId: p.id, preis: positionsBetrag(p, satz, a.pufferImPreis),
+    nr: String(i + 1), bezeichnung: p.bezeichnung || `Position ${i + 1}`, sollH: runde1(geplantH(p, a)),
+    angebotPositionId: p.id, preis: positionsBetrag(p, satz, a),
   }));
   const fest = daten.projekte.filter((x) => STATUS_FEST.includes(x.status)).length;
   const id = neueId();
@@ -165,8 +186,24 @@ export function lexwareAngebot(daten, a) {
     art: 'angebot', kontaktId: k?.lexwareKontaktId ?? null, name: a.kunde || 'Kunde',
     titel: a.projektname || 'Angebot', einleitung: a.kopftext || '', bemerkung: [a.fusstext, a.zahlungsbedingungen].filter(Boolean).join('\n\n'),
     datum: a.datum, gueltigBis: a.gueltigBis,
-    zeilen: a.positionen.filter((p) => positionsBetrag(p, satz, a.pufferImPreis) > 0).map((p) => (p.abrechnung === 'pauschal'
+    zeilen: a.positionen.filter((p) => positionsBetrag(p, satz, a) > 0).map((p) => (p.abrechnung === 'pauschal'
       ? { name: p.bezeichnung || 'Position', beschreibung: p.beschreibung || '', menge: 1, einheit: 'Pauschal', preisNetto: p.pauschalpreis }
-      : { name: p.bezeichnung || 'Position', beschreibung: p.beschreibung || '', menge: a.pufferImPreis === false ? p.grundH : geplantH(p), einheit: 'Stunden', preisNetto: satz })),
+      : { name: p.bezeichnung || 'Position', beschreibung: p.beschreibung || '', menge: a.pufferImPreis === false ? p.grundH : geplantH(p, a), einheit: 'Stunden', preisNetto: satz })),
   };
+}
+
+/**
+ * Ältere Angebote (Puffer je Position) auf Zulagen am Angebot umstellen (ändert a). Gleichen alle Positionen
+ * denselben Prozentwert, wird daraus eine Prozent-Zulage, sonst eine feste Zulage mit derselben Stundensumme.
+ */
+export function zulagenUmstellen(a) {
+  if (Array.isArray(a.zulagen)) return false;
+  const alt = a.positionen.map((p) => (p.pufferEinheit === 'h' ? { h: p.puffer || 0 } : { pr: p.puffer || 0, h: (p.grundH || 0) * (p.puffer || 0) / 100 }));
+  const prozente = [...new Set(alt.map((x) => x.pr))];
+  const summe = runde2(alt.reduce((s, x) => s + x.h, 0));
+  a.zulagen = !summe ? []
+    : prozente.length === 1 && prozente[0] != null ? [{ id: neueId(), name: 'Puffer (übernommen)', art: 'prozent', wert: prozente[0], an: true }]
+      : [{ id: neueId(), name: 'Puffer (übernommen)', art: 'fest', wert: summe, an: true }];
+  for (const p of a.positionen) { delete p.puffer; delete p.pufferEinheit; }
+  return true;
 }

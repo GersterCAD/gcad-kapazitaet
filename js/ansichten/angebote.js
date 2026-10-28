@@ -6,7 +6,7 @@ import { el, zahlText, schalter, hakenIcon, kreuzIcon, plusIcon } from '../ui.js
 import * as zustand from '../zustand.js';
 import { euro } from '../kern/abrechnung.js';
 import {
-  ANGEBOT_STATUS, ANGEBOT_STATUS_NAME, PROJEKTARTEN, neuesAngebot, neuePosition, pufferH, geplantH, positionsBetrag,
+  ANGEBOT_STATUS, ANGEBOT_STATUS_NAME, PROJEKTARTEN, neuesAngebot, neuePosition, pufferH, geplantH, positionsBetrag, zulagenListe, neueZulagen,
   summen, angebotsKennzahlen, abgelaufen, angebotAnnehmen, annahmeZuruecknehmen,
 } from '../kern/angebot.js';
 import { anfragePruefen } from '../kern/anfrage.js';
@@ -145,7 +145,7 @@ export function angebotSeite(id) {
         await zustand.aendern((x) => { x.angebote = x.angebote.filter((y) => y.id !== id); });
         location.hash = '#/angebote';
       })])]),
-      el('aside', { class: 'angebot-seite' }, [summenKarte(d, a, s), kapazitaetKarte(d, a, s), lernwertKarte(d, a, s)]),
+      el('aside', { class: 'angebot-seite' }, [zulagenKarte(d, a), summenKarte(d, a, s), kapazitaetKarte(d, a, s), lernwertKarte(d, a, s)]),
     ]),
     mobilLeiste(d, a, s),
   ]);
@@ -309,29 +309,19 @@ function positionenKarte(d, a, s) {
       ]),
       el('div', { class: 'ap-text', 'data-label': 'Bezeichnung' }, [bez, besch]),
       el('div', { 'data-label': 'Grund h' }, zahlFeld('grundH', 'Grundstunden')),
-      el('div', { class: 'ap-puffer', 'data-label': 'Puffer' }, [
-        zahlFeld('puffer', 'Puffer'),
-        el('button', {
-          type: 'button', class: 'einheitknopf', 'aria-label': `Puffer in ${p.pufferEinheit === '%' ? 'Stunden' : 'Prozent'} angeben`, 'data-fokus': `einheit-${p.id}`,
-          onclick: () => aendernPos(p.id, (q) => {
-            const h = pufferH(q);
-            if (q.pufferEinheit === '%') { q.pufferEinheit = 'h'; q.puffer = Math.round(h * 2) / 2; }
-            else { q.pufferEinheit = '%'; q.puffer = q.grundH ? Math.round((q.puffer / q.grundH) * 100) : 36; }
-          }),
-        }, p.pufferEinheit),
-      ]),
-      el('div', { class: 'ap-geplant zahl', 'data-label': 'geplant' }, zahlText(geplantH(p))),
+      el('div', { class: 'ap-geplant ap-zulage zahl', 'data-label': 'Zulagen' }, `+ ${zahlText(pufferH(p, a), 2)} h`),
+      el('div', { class: 'ap-geplant zahl', 'data-label': 'geplant' }, zahlText(geplantH(p, a))),
       el('div', { 'data-label': 'Abrechnung' }, el('div', { class: 'umschalter hoch', role: 'group', 'aria-label': 'Abrechnung' }, [['stunden', 'Stunden'], ['pauschal', 'Pauschal']].map(([k, n]) => el('button', {
         type: 'button', 'aria-pressed': String(p.abrechnung === k), 'data-fokus': `abr-${k}-${p.id}`,
         onclick: () => aendernPos(p.id, (q, x) => {
-          if (k === 'pauschal' && q.pauschalpreis == null) q.pauschalpreis = Math.round(geplantH(q) * (summen(zustand.aktuell(), x).satz ?? 0));
+          if (k === 'pauschal' && q.pauschalpreis == null) q.pauschalpreis = Math.round(geplantH(q, x) * (summen(zustand.aktuell(), x).satz ?? 0));
           q.abrechnung = k;
         }),
       }, n)))),
       el('div', { 'data-label': 'Satz / Preis' }, pauschal
         ? zahlFeld('pauschalpreis', 'Pauschalpreis', { step: '10' })
         : el('div', { class: 'ap-satz zahl' }, s.satz ? `${euro(s.satz)}/h` : '– €/h')),
-      el('div', { class: 'ap-betrag fett zahl', 'data-label': 'Betrag' }, euro(positionsBetrag(p, s.satz, a.pufferImPreis))),
+      el('div', { class: 'ap-betrag fett zahl', 'data-label': 'Betrag' }, euro(positionsBetrag(p, s.satz, a))),
       el('button', {
         type: 'button', class: 'kreuz gross', 'aria-label': `Position ${i + 1} löschen`,
         onclick: () => aendereAngebot(a.id, (x) => { x.positionen = x.positionen.filter((y) => y.id !== p.id); }),
@@ -342,11 +332,11 @@ function positionenKarte(d, a, s) {
   return el('section', { class: 'karte ohne-innenabstand', 'aria-labelledby': 'h-apos' }, [
     el('div', { class: 'kartenkopf innen' }, [
       el('h2', { id: 'h-apos', class: 'fuellung' }, 'Positionen'),
-      el('span', { id: 'l-pip', class: 'zeile-text' }, 'Puffer im Preis'),
+      el('span', { id: 'l-pip', class: 'zeile-text' }, 'Zulagen im Preis'),
       schalter(a.pufferImPreis !== false, '#l-pip', (an) => aendereAngebot(a.id, (x) => { x.pufferImPreis = an; }), 'a-pip'),
     ]),
     el('div', { class: 'scrollkasten' }, el('div', { class: 'ap-tabelle' }, [
-      el('div', { class: 'ap-zeile ap-kopf label' }, ['Nr.', 'Bezeichnung', 'Grund h', 'Puffer', 'geplant', 'Abrechnung', 'Satz / Preis', 'Betrag', ''].map((t, i) => el('span', { class: i === 7 ? 'rechts' : null }, t))),
+      el('div', { class: 'ap-zeile ap-kopf label' }, ['Nr.', 'Bezeichnung', 'Grund h', 'Zulagen', 'geplant', 'Abrechnung', 'Satz / Preis', 'Betrag', ''].map((t, i) => el('span', { class: i === 7 ? 'rechts' : null }, t))),
       ...a.positionen.map(zeile),
     ])),
     el('div', { class: 'innen' }, [
@@ -355,7 +345,7 @@ function positionenKarte(d, a, s) {
         type: 'button', class: 'pille gross gestrichelt', 'data-fokus': 'a-pos-neu',
         onclick: () => aendereAngebot(a.id, (x) => { x.positionen.push(neuePosition()); }),
       }, 'Position hinzufügen'),
-      el('p', { class: 'zeile-hinweis' }, 'Puffer = deine Zulagen aus der Angebotsplanung (Kommunikation, Rücksprachen, Risiko, Rückläufer), Vorgabe 36 %. Den Planungspuffer wählst du beim Einplanen.'),
+      el('p', { class: 'zeile-hinweis' }, 'Die Zulagen stellst du rechts unter „Zulagen“ ein. Sie werden nach dem Stundenanteil auf die Positionen verteilt. Den Planungspuffer wählst du beim Einplanen.'),
     ]),
   ]);
 }
@@ -371,6 +361,64 @@ function fussKarte(a) {
   ]);
 }
 
+// ---------- Zulagen (wie im Kalkulator, am Rand) ----------
+
+/**
+ * Editor für Zulagen: Schalter, Name, Wert in h oder %, Ergebnis in h, löschen, hinzufügen.
+ * liste = Zulagen mit h (zulagenListe) oder ohne; aendern(fn) ändert die gespeicherte Liste.
+ */
+export function zulagenEditor(liste, aendern, { prefix = 'zl', mitErgebnis = true } = {}) {
+  const setze = (i, fn) => aendern((l) => { fn(l[i]); });
+  return el('div', { class: 'zulagen' }, [
+    ...liste.map((z, i) => {
+      const name = el('input', {
+        class: 'feld zulage-name', type: 'text', value: z.name, 'aria-label': 'Name der Zulage', disabled: !z.an, 'data-fokus': `${prefix}-name-${i}`,
+        onchange: () => setze(i, (x) => { x.name = name.value.trim() || 'Zulage'; }),
+      });
+      const wert = el('input', {
+        class: 'feld zahl rechts zulage-wert', type: 'number', min: '0', step: z.art === 'fest' ? '0.25' : '1', value: String(z.wert ?? 0),
+        'aria-label': `${z.name} in ${z.art === 'fest' ? 'Stunden' : 'Prozent'}`, disabled: !z.an, 'data-fokus': `${prefix}-wert-${i}`,
+        onchange: () => setze(i, (x) => { x.wert = zahlEin(wert.value); }),
+      });
+      return el('div', { class: `zulage${z.an ? '' : ' aus'}` }, [
+        schalter(!!z.an, `${z.name} ein oder aus`, (an) => setze(i, (x) => { x.an = an; }), `${prefix}-an-${i}`),
+        name,
+        el('div', { class: 'zulage-eingabe' }, [
+          wert,
+          el('button', {
+            type: 'button', class: 'einheitknopf klein', disabled: !z.an, 'data-fokus': `${prefix}-art-${i}`,
+            'aria-label': z.art === 'fest' ? 'Auf Prozent umstellen' : 'Auf feste Stunden umstellen',
+            onclick: () => setze(i, (x) => { x.art = x.art === 'fest' ? 'prozent' : 'fest'; }),
+          }, z.art === 'fest' ? 'h' : '%'),
+        ]),
+        mitErgebnis ? el('span', { class: 'zulage-h zahl' }, z.an ? `${zahlText(z.h ?? 0, 2)} h` : '–') : null,
+        el('button', { type: 'button', class: 'kreuz', 'aria-label': `${z.name} entfernen`, onclick: () => aendern((l) => { l.splice(i, 1); }) }, [kreuzIcon()]),
+      ]);
+    }),
+    el('button', {
+      type: 'button', class: 'pille gestrichelt', 'data-fokus': `${prefix}-neu`,
+      onclick: () => aendern((l) => { l.push({ id: globalThis.crypto.randomUUID(), name: 'Neue Zulage', art: 'prozent', wert: 5, an: true }); }),
+    }, 'Zulage hinzufügen'),
+  ]);
+}
+
+function zulagenKarte(d, a) {
+  const liste = zulagenListe(a);
+  const vorlage = JSON.stringify((d.einstellungen.angebotZulagen ?? []).map(({ name, art, wert, an }) => [name, art, wert, an]));
+  const hier = JSON.stringify((a.zulagen ?? []).map(({ name, art, wert, an }) => [name, art, wert, an]));
+  return el('section', { class: 'kachel zulagen-karte', 'aria-labelledby': 'h-azul' }, [
+    el('h2', { id: 'h-azul', class: 'label' }, 'Zulagen'),
+    el('p', { class: 'kartentext ohne-abstand' }, 'Feste Stunden je Auftrag und Prozent auf die Grundstunden. Antippen schaltet eine Zulage ein oder aus.'),
+    el('div', { class: 'mit-abstand-mittel' }, zulagenEditor(liste, (fn) => aendereAngebot(a.id, (x) => { x.zulagen ??= []; fn(x.zulagen); }), { prefix: 'azl' })),
+    el('div', { class: 'knopfreihe eng mit-abstand-mittel' }, vorlage === hier
+      ? [el('span', { class: 'zeile-hinweis ohne-abstand' }, 'Wie die Vorlage in den Einstellungen.')]
+      : [
+          el('button', { type: 'button', class: 'textknopf', 'data-fokus': 'azl-vorlage-speichern', onclick: () => zustand.aendern((x) => { x.einstellungen.angebotZulagen = (a.zulagen ?? []).map(({ name, art, wert, an }) => ({ name, art, wert, an })); }) }, 'Als Vorlage speichern'),
+          el('button', { type: 'button', class: 'textknopf', 'data-fokus': 'azl-vorlage-laden', onclick: () => aendereAngebot(a.id, (x, dd) => { x.zulagen = neueZulagen(dd.einstellungen.angebotZulagen); }) }, 'Vorlage übernehmen'),
+        ]),
+  ]);
+}
+
 function summenKarte(d, a, s) {
   const satzFeld = el('input', {
     class: 'feld hoch rechts zahl', type: 'number', step: '0.5', min: '0', value: a.stundensatz ?? '', placeholder: s.quelle === 'kunde' ? String(s.satz) : '', 'aria-label': 'Stundensatz für dieses Angebot', 'data-fokus': 'a-satz',
@@ -382,7 +430,7 @@ function summenKarte(d, a, s) {
     el('h2', { id: 'h-asum', class: 'label' }, 'Summen'),
     el('div', { class: 'mit-abstand-mittel' }, [
       zeile('Grundstunden', `${zahlText(s.grundH)} h`),
-      zeile('Puffer', `+ ${zahlText(s.pufferH)} h (${s.pufferProzent} %)`),
+      zeile('Zulagen', `+ ${zahlText(s.pufferH, 2)} h (${s.pufferProzent} %)`),
       zeile('geplant', `${zahlText(s.geplantH)} h`, 'stahl'),
     ]),
     el('div', { class: 'summen-trenner' }, [
@@ -500,7 +548,7 @@ export function auftragSeite(id) {
   }
 
   const gewaehlt = a.positionen.filter((p) => !f.aus.has(p.id));
-  const planH = gewaehlt.reduce((s, p) => s + geplantH(p), 0);
+  const planH = gewaehlt.reduce((s, p) => s + geplantH(p, a), 0);
   const r = planH > 0 ? anfragePruefen(d, { schaetzungH: planH, puffer: f.puffer, start: f.start, wunschtermin: f.deadline }, zustand.planOptionen()) : null;
   const fertig = r?.varianten[0].fertig ?? null;
   const sollH = r?.sollH ?? 0;
@@ -540,8 +588,8 @@ export function auftragSeite(id) {
           }, el('span', { class: 'kaestchen-feld', 'aria-hidden': 'true' }, an ? hakenIcon(12) : null)),
           el('span', { class: 'auswahl-nr fett sekundaer zahl' }, String(i + 1)),
           el('span', { class: `fuellung${an ? '' : ' blass'}` }, p.bezeichnung || `Position ${i + 1}`),
-          el('span', { class: 'zeile-text sekundaer zahl' }, `${zahlText(p.grundH)} h + ${p.pufferEinheit === '%' ? `${zahlText(p.puffer)} %` : `${zahlText(p.puffer)} h`}`),
-          el('span', { class: 'auswahl-h fett zahl' }, `${zahlText(geplantH(p))} h`),
+          el('span', { class: 'zeile-text sekundaer zahl' }, `${zahlText(p.grundH)} h + ${zahlText(pufferH(p, a), 2)} h Zulagen`),
+          el('span', { class: 'auswahl-h fett zahl' }, `${zahlText(geplantH(p, a))} h`),
         ]);
       })),
       el('div', { class: 'summenzeile brutto klein' }, [el('span', {}, 'Aus dem Angebot'), el('span', { class: 'zahl stahl-text' }, `${zahlText(planH)} h`)]),

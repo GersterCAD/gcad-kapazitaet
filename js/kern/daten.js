@@ -2,6 +2,8 @@
 // Eine JSON-Datei, Datum als YYYY-MM-DD, Stunden als Zahl, IDs als UUID.
 // Berechnet, nicht gespeichert: Soll, Ist, Feiertage, Wochenkapazität, Termine (kommen aus dem Kalender-JSON).
 
+import { zulagenUmstellen, STANDARD_ZULAGEN } from './angebot.js';
+
 export const SCHEMA_VERSION = 1;
 
 export const STATUS = ['anfrage', 'angebot', 'auftrag', 'laeuft', 'pausiert', 'abgeschlossen', 'abgesagt'];
@@ -29,6 +31,7 @@ export function standardEinstellungen() {
     bundesland: 'BW',
     timerRundung: 15,
     abrechnungZusammenfassen: 'tag',
+    angebotZulagen: STANDARD_ZULAGEN.map((z) => ({ ...z })),
     kalender: [
       { name: 'Gerster CAD', regel: 'alle' },
       { name: 'Privat', regel: 'ganztaegig' },
@@ -117,6 +120,7 @@ export function pruefeDaten(roh) {
   zahl(e.warnWochen, 'Warngrenze', 1, 52, fehler);
   zahl(e.standardPuffer, 'Standard-Puffer', 0, 20, fehler);
   if (e.maxTagH < e.regeltagH) fehler.push('Der längste Tag ist kürzer als der Regeltag.');
+  if (!Array.isArray(e.angebotZulagen)) e.angebotZulagen = basis.einstellungen.angebotZulagen;
 
   const projektIds = new Set();
   d.projekte.forEach((p, i) => {
@@ -170,12 +174,15 @@ export function pruefeDaten(roh) {
     datum(a?.gueltigBis, `${wo}: gültig bis`, fehler, true);
     if (a?.stundensatz != null) zahl(a.stundensatz, `${wo}: Stundensatz`, 0, 10000, fehler);
     if (a && !Array.isArray(a.positionen)) a.positionen = [];
+    if (a) zulagenUmstellen(a);
+    (a?.zulagen ?? []).forEach((z, j) => {
+      if (!['fest', 'prozent'].includes(z?.art)) fehler.push(`${wo}, Zulage ${j + 1}: Art „${z?.art}“ unbekannt.`);
+      zahl(z?.wert, `${wo}, Zulage ${j + 1}`, 0, 100000, fehler);
+    });
     (a?.positionen ?? []).forEach((p, j) => {
       const pw = `${wo}, Position ${j + 1}`;
       if (!p?.id) fehler.push(`${pw}: ID fehlt.`);
       zahl(p?.grundH, `${pw}: Grundstunden`, 0, 100000, fehler);
-      zahl(p?.puffer, `${pw}: Puffer`, 0, 100000, fehler);
-      if (!['%', 'h'].includes(p?.pufferEinheit)) fehler.push(`${pw}: Puffer-Einheit „${p?.pufferEinheit}“ unbekannt.`);
       if (!['stunden', 'pauschal'].includes(p?.abrechnung)) fehler.push(`${pw}: Abrechnung „${p?.abrechnung}“ unbekannt.`);
       if (p?.pauschalpreis != null) zahl(p.pauschalpreis, `${pw}: Pauschalpreis`, 0, 10000000, fehler);
     });

@@ -11,6 +11,7 @@ import { zusammenfassung, neueId } from '../kern/daten.js';
 import * as kalender from '../kalender.js';
 import * as github from '../github.js';
 import * as lexware from '../lexware.js';
+import { zulagenEditor } from './angebote.js';
 import * as abgleich from '../abgleich.js';
 import { unterschiede } from '../kern/abgleich.js';
 import { ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN, euro } from '../kern/abrechnung.js';
@@ -377,6 +378,9 @@ function abrechnungKarte(d) {
       ]),
     ]),
     kundenSaetze(d),
+    el('div', { class: 'label mit-abstand-gross', id: 'l-zulagen' }, 'Zulagen für neue Angebote'),
+    el('p', { class: 'zeile-hinweis' }, 'Wie im Kalkulator. Jedes neue Angebot startet damit, im Angebot änderst du sie einzeln.'),
+    el('div', { class: 'mit-abstand-mittel', role: 'group', 'aria-labelledby': 'l-zulagen' }, zulagenEditor(d.einstellungen.angebotZulagen ?? [], (fn) => setze((e) => { e.angebotZulagen ??= []; fn(e.angebotZulagen); }), { prefix: 'ezl', mitErgebnis: false })),
   ]);
 }
 

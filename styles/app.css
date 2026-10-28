@@ -778,3 +778,29 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .ohne-abstand { margin-top: 0; }
 .zeile.umbruch { flex-wrap: wrap; }
 .zeile.umbruch > .fuellung { flex-basis: 100%; }
+
+/* Zulagen am Angebot (wie im Kalkulator): Schalter · Name · Wert h/% · Ergebnis · entfernen */
+.zulagen { display: flex; flex-direction: column; gap: 4px; align-items: stretch; max-width: 720px; }
+.zulagen > .pille { align-self: flex-start; margin-top: 8px; }
+.zulage { display: grid; grid-template-columns: 52px minmax(0, 1fr) 104px 56px 44px; gap: 8px; align-items: center; min-height: 48px; }
+.zulage:not(:has(.zulage-h)) { grid-template-columns: 52px minmax(0, 1fr) 104px 44px; }
+.zulage .feld { height: 36px; min-width: 0; width: 100%; font-size: 13px; }
+.zulage.aus .zulage-name, .zulage.aus .zulage-wert { color: var(--text-2); background: transparent; }
+.zulage-eingabe { display: flex; gap: 4px; }
+.zulage-wert { padding: 0 8px; }
+.einheitknopf.klein { width: 36px; height: 36px; }
+.einheitknopf:disabled { color: var(--termin); cursor: default; }
+.zulage-h { text-align: right; font-size: 13px; font-weight: 500; }
+.ap-zulage { color: var(--text-2); font-weight: 400; }
+/* Zulagen-Karte: über die ganze Breite, wenn die Karten unter den Positionen stehen; schmal zweizeilig */
+.angebot-seite > .zulagen-karte { grid-column: 1 / -1; }
+.zulagen { container-type: inline-size; }
+@container (max-width: 420px) {
+  .zulage, .zulage:not(:has(.zulage-h)) { grid-template-columns: 52px minmax(0, 1fr) auto 44px; grid-template-areas: "an name name weg" ". wert h ."; row-gap: 4px; padding: 4px 0; }
+  .zulage > .schalter { grid-area: an; }
+  .zulage > .zulage-name { grid-area: name; }
+  .zulage > .zulage-eingabe { grid-area: wert; }
+  .zulage > .zulage-h { grid-area: h; }
+  .zulage > .kreuz { grid-area: weg; }
+}
+.zulage-eingabe .zulage-wert { width: 64px; }
