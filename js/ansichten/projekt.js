@@ -73,7 +73,10 @@ export function projektseite(id) {
           p.kunde ? el('span', { class: 'zeile-text sekundaer' }, `· ${p.kunde}`) : null,
         ]),
       ]),
-      el('a', { class: 'pille hoch', href: `#/projekte/${p.id}/bearbeiten` }, 'Projekt bearbeiten'),
+      el('div', { class: 'knopfreihe' }, [
+        ['anfrage', 'angebot'].includes(p.status) ? el('a', { class: 'pille hoch', href: `#/anfragen/${p.id}` }, 'Anfrage prüfen') : null,
+        el('a', { class: 'pille hoch', href: `#/projekte/${p.id}/bearbeiten` }, 'Projekt bearbeiten'),
+      ]),
     ]),
     kennzahlen(d, p, plan, info),
     el('div', { class: 'zweispaltig' }, [

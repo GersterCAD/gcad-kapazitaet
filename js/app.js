@@ -6,6 +6,7 @@ import { isoWoche, tagLang } from './kern/datum.js';
 import { platzhalter } from './ansichten/platzhalter.js';
 import { einstellungen } from './ansichten/einstellungen.js';
 import { uebersicht } from './ansichten/uebersicht.js';
+import { anfrageSeite, anfrageKopf, anfrageVergessen } from './ansichten/anfrage.js';
 import { projektliste } from './ansichten/projekte.js';
 import { projektseite, projektKontext } from './ansichten/projekt.js';
 import { projektformular, formularKontext, formularVergessen } from './ansichten/projektformular.js';
@@ -42,16 +43,7 @@ const ANSICHTEN = {
     status: 'Nicht gespeichert',
     inhalt: projektformular(null),
   }),
-  anfragen: () => ({
-    bereich: 'anfragen',
-    kontext: ['Anfrage prüfen ', el('span', { class: 'sekundaer' }, '· noch nicht eingeplant')],
-    status: 'Entwurf · nicht gespeichert',
-    inhalt: platzhalter({
-      label: 'Anfrage prüfen',
-      titel: 'Passt das rein?',
-      text: 'Stunden schätzen, Puffer wählen, Wunschtermin prüfen. Das folgt in Schritt 6.',
-    }),
-  }),
+  anfragen: () => ({ bereich: 'anfragen', ...anfrageKopf(null), voll: true, inhalt: anfrageSeite(null) }),
   kalender: () => ({
     bereich: 'kalender',
     kontext: 'Kalender',
@@ -108,7 +100,8 @@ function navigation(aktiv) {
 // Adressen mit Projekt-ID: #/projekte/<id> und #/projekte/<id>/bearbeiten
 function ansichtFuer(pfad) {
   if (ANSICHTEN[pfad]) return ANSICHTEN[pfad]();
-  if (/^anfragen\/[^/]+$/.test(pfad)) return ANSICHTEN.anfragen(); // Anfrage öffnen – die Seite folgt in Schritt 6
+  const a = pfad.match(/^anfragen\/([^/]+)$/);
+  if (a) return { bereich: 'anfragen', ...anfrageKopf(a[1]), voll: true, inhalt: anfrageSeite(a[1]) };
   const m = pfad.match(/^projekte\/([^/]+)(\/bearbeiten)?$/);
   if (m) {
     const p = zustand.aktuell().projekte.find((x) => x.id === m[1]);
@@ -126,13 +119,18 @@ function zeigen() {
   document.title = `${titel} · Kapazität`;
 
   const app = document.getElementById('app');
-  const inhalt = el('main', { class: `inhalt${ansicht.schmal ? ' schmal' : ''}`, id: 'inhalt', tabindex: '-1' }, ansicht.inhalt);
+  const inhalt = el('main', { class: `inhalt${ansicht.schmal ? ' schmal' : ''}${ansicht.voll ? ' voll' : ''}`, id: 'inhalt', tabindex: '-1' }, ansicht.inhalt);
   app.replaceChildren(kopfzeile(ansicht), navigation(ansicht.bereich), inhalt);
   // Nach dem Neuzeichnen den Fokus zurück auf denselben Knopf (wichtig für Tastatur und Vorlesen)
   if (fokus) app.querySelector(`[data-fokus="${CSS.escape(fokus)}"]`)?.focus({ preventScroll: true });
 }
 
-window.addEventListener('hashchange', () => { formularVergessen(); zeigen(); window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => {
+  formularVergessen();
+  anfrageVergessen(location.hash.replace(/^#\/?/, ''));
+  zeigen();
+  window.scrollTo(0, 0);
+});
 zustand.abonnieren(zeigen);
 zustand.starten()
   .catch((f) => console.error('Daten konnten nicht geladen werden:', f))
