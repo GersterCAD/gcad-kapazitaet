@@ -52,6 +52,7 @@ export function leereDaten() {
     timer: null,
     kunden: [],
     angebote: [],
+    rechnungen: [],
   };
 }
 
@@ -179,6 +180,16 @@ export function pruefeDaten(roh) {
       if (p?.pauschalpreis != null) zahl(p.pauschalpreis, `${pw}: Pauschalpreis`, 0, 10000000, fehler);
     });
     if (a?.projektId && !projektIds.has(a.projektId)) a.projektId = null;
+  });
+  d.rechnungen.forEach((r, i) => {
+    const wo = `Rechnung ${i + 1}${r?.titel ? ` (${r.titel})` : ''}`;
+    if (!r?.id) fehler.push(`${wo}: ID fehlt.`);
+    bezug(r, wo);
+    if (!['stunden', 'pauschal', 'abschlag', 'teil'].includes(r?.art)) fehler.push(`${wo}: Art „${r?.art}“ unbekannt.`);
+    if (!['entwurf', 'sendet', 'uebertragen', 'fehler', 'erledigt'].includes(r?.status)) fehler.push(`${wo}: Status „${r?.status}“ unbekannt.`);
+    zahl(r?.netto, `${wo}: Betrag`, -10000000, 10000000, fehler);
+    if (r && !Array.isArray(r.zeilen)) r.zeilen = [];
+    if (r && !Array.isArray(r.eintraege)) r.eintraege = [];
   });
   // Laufender Timer: ohne gültiges Projekt oder Startzeit wird er verworfen (kein Fehler)
   if (d.timer && (!projektIds.has(d.timer.projektId) || Number.isNaN(Date.parse(d.timer.start)))) d.timer = null;

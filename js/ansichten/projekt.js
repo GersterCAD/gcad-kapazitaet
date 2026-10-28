@@ -10,6 +10,7 @@ import { ausText, alsText, plusTage, tagKurz, isoWoche } from '../kern/datum.js'
 import { loeschKnopf } from './einstellungen.js';
 import { meilensteineExportieren } from './kalender.js';
 import { timerKarte } from './zeitstopper.js';
+import { rechnungenVon } from '../kern/rechnung.js';
 import { rechnungsZeilen, ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN, abrechnungUeberblick, euro } from '../kern/abrechnung.js';
 
 const PLAN_CHIP = { imPlan: ['gruen', 'im Plan'], knapp: ['gelb', 'knapp'], zuSpaet: ['rot', 'zu spät'] };
@@ -368,7 +369,7 @@ function zeitBuchen(d, p, s) {
 function abrechnungKarte(d, p) {
   const zeilen = rechnungsZeilen(d, p.id);
   const u = abrechnungUeberblick(d, p);
-  if (!zeilen.length && u.art !== 'pauschal') return null;
+  if (!zeilen.length && u.art !== 'pauschal' && !rechnungenVon(d, p.id).length) return null;
   const art = ZUSAMMENFASSEN.find((x) => x.id === (d.einstellungen.abrechnungZusammenfassen ?? STANDARD_ZUSAMMENFASSEN));
   const gezeigt = zeilen.slice(-5).reverse();
   const summeH = zeilen.reduce((a, z) => a + z.stunden, 0);
@@ -396,6 +397,12 @@ function abrechnungKarte(d, p) {
       el('span', { class: 'fett-mittel zahl rechts' }, [`${zahlText(z.stunden, 2)} h`, z.betrag != null ? el('span', { class: 'block sekundaer' }, euro(z.betrag)) : null]),
     ]))),
     zeilen.length > gezeigt.length ? el('div', { class: 'zeile-hinweis' }, `… und ${zeilen.length - gezeigt.length} ältere`) : null,
+    // Rechnung erstellen (Projektseite.dc.html)
+    el('a', { class: 'pille gross haupt breit mit-abstand', href: `#/projekte/${p.id}/rechnung` }, 'Rechnung erstellen'),
+    (() => {
+      const r = rechnungenVon(d, p.id)[0];
+      return el('div', { class: 'zeile-hinweis mittig' }, r ? `Zuletzt abgerechnet: ${tagKurz(ausText(r.erstellt))} · ${euro(r.netto)}` : 'Zuletzt abgerechnet: keine Rechnung');
+    })(),
   ]);
 }
 

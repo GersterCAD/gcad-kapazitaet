@@ -8,6 +8,8 @@ import { uebersicht } from './ansichten/uebersicht.js';
 import { kalenderSeite, kalenderVergessen } from './ansichten/kalender.js';
 import { anfrageSeite, anfrageKopf, anfrageVergessen } from './ansichten/anfrage.js';
 import { projektliste } from './ansichten/projekte.js';
+import { abrechnungOffen, rechnungenListe, rechnungSeite, rechnungKopf, rechnungVergessen } from './ansichten/abrechnung.js';
+import * as lexware from './lexware.js';
 import { angeboteListe, angebotSeite, angebotKopf, auftragSeite, auftragVergessen } from './ansichten/angebote.js';
 import { projektseite, projektKontext } from './ansichten/projekt.js';
 import { projektformular, formularKontext, formularVergessen } from './ansichten/projektformular.js';
@@ -19,11 +21,12 @@ import * as stoppuhr from './stoppuhr.js';
 import { kopfTimer, mobilTimer } from './ansichten/zeitstopper.js';
 
 // Fünf Bereiche nach Entwurf Index B (Navigation.dc.html), Einstellungen als Zahnrad in der Kopfzeile.
-// Abrechnung kommt dazu, sobald sie gebaut ist. Angebote enthält „Anfragen“ (Anfrage prüfen) und „Angebote“.
+// Angebote enthält „Anfragen“ (Anfrage prüfen) und „Angebote“.
 const BEREICHE = [
   { id: 'uebersicht', name: 'Übersicht', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
   { id: 'projekte', name: 'Projekte', icon: 'M3 7h18v13H3zM8 7V4h8v3' },
   { id: 'angebote', name: 'Angebote', icon: 'M14 3H6v18h12V7zM14 3v4h4M9 12h6M9 16h6' },
+  { id: 'abrechnung', name: 'Abrechnung', icon: 'M4 4h16v16H4zM8 9h8M8 13h8M8 17h4' },
   { id: 'kalender', name: 'Kalender', icon: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4' },
 ];
 const ZAHNRAD = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>';
@@ -54,6 +57,8 @@ const ANSICHTEN = {
   }),
   anfragen: () => ({ bereich: 'angebote', titel: 'Anfrage prüfen', ...anfrageKopf(null), voll: true, inhalt: anfrageSeite(null) }),
   angebote: () => ({ bereich: 'angebote', kontext: 'Angebote', inhalt: angeboteListe() }),
+  abrechnung: () => ({ bereich: 'abrechnung', kontext: 'Abrechnung', inhalt: abrechnungOffen() }),
+  'abrechnung/rechnungen': () => ({ bereich: 'abrechnung', titel: 'Rechnungen', kontext: 'Rechnungen', inhalt: rechnungenListe() }),
   kalender: () => ({
     bereich: 'kalender',
     kontext: 'Kalender',
@@ -81,10 +86,17 @@ function kalenderStatus() {
     farbe = frisch ? 'gruen' : 'gelb';
     text = `Kalender ${i.quelle === 'datei' ? 'aus Datei' : 'abgeglichen'} · ${kalender.vorText(i.abgeglichen)}`;
   }
-  // Kurz wie im Entwurf („Kalender · Lexware“, ein Punkt für alle Verbindungen), Einzelheiten als Hinweis
-  return el('a', { class: 'kopf-status verbindungen', href: '#/kalender', title: i.fehler ? `${text}: ${i.fehler}` : text, 'aria-label': text }, [
+  // Kurz wie im Entwurf („Kalender · Lexware“, ein Punkt für alle Verbindungen), Einzelheiten als Hinweis.
+  // Grün = alles abgeglichen, Gelb = Hinweis, Rot = Fehler.
+  const lx = lexware.info();
+  const lxAn = lexware.verbunden();
+  const lxFehler = github.verbunden() && !zustand.istBeispiel() && lx.status && !lx.status.verbunden && lx.status.fehler && !/fehlt noch/.test(lx.status.fehler);
+  if (lxFehler) farbe = 'rot';
+  else if (lxAn && farbe === 'gruen' && lx.fehler) farbe = 'gelb';
+  const teile = [text, lxAn ? `Lexware Office verbunden${lx.status.organisation ? ` (${lx.status.organisation})` : ''}` : lxFehler ? `Lexware: ${lx.status.fehler}` : null].filter(Boolean);
+  return el('a', { class: 'kopf-status verbindungen', href: lxFehler ? '#/einstellungen' : '#/kalender', title: i.fehler ? `${teile.join(' · ')}: ${i.fehler}` : teile.join(' · '), 'aria-label': teile.join(' · ') }, [
     el('span', { class: `punkt ${farbe}`.trim(), 'aria-hidden': 'true' }),
-    el('span', { class: 'verbindungen-text' }, 'Kalender'),
+    el('span', { class: 'verbindungen-text' }, lxAn || lxFehler ? 'Kalender · Lexware' : 'Kalender'),
   ]);
 }
 
@@ -141,6 +153,8 @@ function ansichtFuer(pfad) {
     if (an[2]) return { bereich: 'angebote', titel: 'Auftrag einplanen', zurueck: `#/angebote/${an[1]}`, kontext: 'Auftrag einplanen', grau: true, schmal: true, inhalt: auftragSeite(an[1]) };
     return { bereich: 'angebote', ...angebotKopf(an[1]), inhalt: angebotSeite(an[1]) };
   }
+  const r = pfad.match(/^projekte\/([^/]+)\/rechnung$/);
+  if (r) return { bereich: 'abrechnung', ...rechnungKopf(r[1]), inhalt: rechnungSeite(r[1]) };
   const m = pfad.match(/^projekte\/([^/]+)(\/bearbeiten)?$/);
   if (m) {
     const p = zustand.aktuell().projekte.find((x) => x.id === m[1]);
@@ -178,14 +192,16 @@ window.addEventListener('hashchange', () => {
   anfrageVergessen(location.hash.replace(/^#\/?/, ''));
   kalenderVergessen();
   auftragVergessen();
+  rechnungVergessen(location.hash.replace(/^#\/?/, ''));
   zeigen();
   window.scrollTo(0, 0);
 });
 zustand.abonnieren(zeigen);
 kalender.abonnieren(zeigen);
 abgleich.abonnieren(zeigen);
-Promise.all([zustand.starten(), github.starten(), kalender.starten(), abgleich.starten()])
-  .then(() => { kalender.automatisch(); abgleich.automatisch(); stoppuhr.ticken(); })
+lexware.abonnieren(zeigen);
+Promise.all([zustand.starten(), github.starten(), kalender.starten(), abgleich.starten(), lexware.starten()])
+  .then(() => { kalender.automatisch(); abgleich.automatisch(); stoppuhr.ticken(); lexware.abgleichen(); lexware.beobachten(); })
   .catch((f) => console.error('Daten konnten nicht geladen werden:', f))
   .finally(zeigen);
 

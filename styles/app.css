@@ -596,6 +596,70 @@ body.grau .kopf, body.grau .bereiche { background: var(--weiss); }
 .reglerwert { min-width: 56px; font-size: 15px; font-weight: 600; }
 .knopf-timer:disabled { background: var(--linie); cursor: default; }
 
+/* Abrechnung und Rechnung nach Index B (Abrechnung.dc.html, Rechnung.dc.html, Zustaende.dc.html) */
+.pille.breit { width: 100%; justify-content: center; }
+.hinweiskarte { display: flex; align-items: center; gap: 16px; padding: 16px 24px; border: 1px solid var(--linie); border-radius: var(--radius-karte); font-size: 14px; line-height: 1.5; flex-wrap: wrap; }
+.hinweiskarte > .fuellung { min-width: 220px; }
+.nowrap-text { white-space: nowrap; }
+.mittig { text-align: center; }
+.chip.gross.mittig { align-self: center; }
+.punkt.stahl { background: var(--stahl); }
+.offentabelle { min-width: 960px; }
+.ot-zeile { display: grid; grid-template-columns: 8px 1.6fr 1.2fr 110px 90px 130px 150px 170px; gap: 16px; align-items: center; min-height: 64px; padding: 0 24px; border-bottom: 1px solid var(--leiste); font-size: 13px; }
+.ot-kopf { min-height: 0; padding-top: 8px; padding-bottom: 8px; border-top: 1px solid var(--linie); border-bottom-color: var(--linie); background: var(--leiste); }
+.ot-zeile .zeile-titel { color: var(--text); text-decoration: none; display: block; }
+.farbstreifen.schmal { width: 4px; height: 32px; border-radius: 2px; }
+.pille.klein-pille { height: 36px; padding: 0 16px; font-size: 12px; }
+.rechts-buendig { justify-self: end; }
+.rechnungszeile { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--linie); font-size: 13px; flex-wrap: wrap; }
+.rechnungszeile .fuellung { min-width: 200px; }
+.rechnung-betrag { width: 110px; text-align: right; }
+.rechnung-status { width: 170px; }
+.rechnung-block { padding-bottom: 8px; }
+.rechnung-block .knopfreihe { margin-top: 4px; }
+.rechnung-flaeche { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+.rechnung-links { flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+.rechnung-rechts { flex: 1 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.umschalter.weiss { background: var(--weiss); border: 1px solid var(--linie); flex-wrap: wrap; align-self: flex-start; }
+.umschalter.weiss button { height: 32px; padding: 0 14px; }
+.umschalter.weiss button[aria-pressed="true"] { background: var(--text); color: var(--weiss); box-shadow: none; font-weight: 500; }
+.satzkasten { display: flex; align-items: center; gap: 16px; padding: 16px; border-radius: var(--radius-karte); background: var(--weiss); }
+.satz-gross { font-size: 20px; font-weight: 600; }
+.eintragszeile { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 24px 0 12px; border-top: 1px solid var(--leiste); font-size: 13px; }
+.ez-datum { width: 80px; flex: none; }
+.ez-zeit { width: 96px; flex: none; }
+.ez-pos { width: 48px; flex: none; }
+.ez-h { width: 48px; flex: none; text-align: right; }
+.eintragszeile .fuellung { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.karte.vorschau { padding: 32px; }
+.vorschau-kopf { margin-top: 16px; font-size: 13px; line-height: 1.5; }
+.vorschau-tabelle { margin-top: 16px; border-top: 1px solid var(--text); }
+.vt-zeile { display: grid; grid-template-columns: 1fr 64px 80px 96px; gap: 12px; padding: 10px 0; font-size: 13px; border-bottom: 1px solid var(--leiste); }
+.vt-kopf { padding: 8px 0; border-bottom-color: var(--linie); }
+.vorschau-summe { margin: 12px 0 0 auto; max-width: 280px; }
+.summenzeile.linie { margin-top: 4px; border-top: 1px solid var(--text); }
+.summenzeile.linie-unten { padding: 10px 0; border-bottom: 1px solid var(--leiste); }
+.zustand { padding: 16px 20px; border-radius: var(--radius-karte); display: flex; flex-direction: column; gap: 8px; }
+.zustand.grau { background: var(--leiste); }
+.zustand.gruen { background: var(--gruen-bg); }
+.zustand.rot { background: var(--rot-bg); }
+.zustand-titel { font-size: 15px; font-weight: 600; }
+.gruen-text { color: var(--gruen); }
+.gruen-dunkel { color: #1E5C30; }
+.rot-text { color: var(--rot); }
+.rot-dunkel { color: #7A1C14; }
+.kreisel { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--linie); border-top-color: var(--stahl); animation: drehen 1s linear infinite; }
+@keyframes drehen { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .kreisel { animation: none; } }
+.pille.rot-pille { border-color: var(--rot); background: var(--rot); color: var(--weiss); }
+.pille.weiss-pille { border-color: var(--weiss); background: var(--weiss); }
+.details summary { cursor: pointer; font-size: 12px; font-weight: 500; color: var(--rot); min-height: 32px; display: flex; align-items: center; }
+.details pre { white-space: pre-wrap; font-size: 11px; max-height: 160px; overflow: auto; }
+.knopf-timer.voll { width: 100%; }
+.karte.grau-karte { background: var(--leiste); border-color: var(--leiste); }
+.schritte { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: var(--leiste); padding: 1px 4px; border-radius: 4px; }
+
 /* Angebotspositionen bis iPad-Breite als Karten statt Tabelle */
 @media (max-width: 1180px) {
   .ap-tabelle { min-width: 0; }
@@ -650,7 +714,7 @@ body.grau .kopf, body.grau .bereiche { background: var(--weiss); }
   .verbindungen { min-width: 24px; min-height: 44px; justify-content: center; }
   .bereiche {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 0;
     padding: 6px 4px max(20px, env(safe-area-inset-bottom)); border-top: 1px solid var(--linie); border-bottom: 0; background: var(--weiss);
   }
   .bereiche a { flex-direction: column; justify-content: center; gap: 2px; height: auto; min-height: 44px; padding: 0; color: var(--text-2); background: none; }
@@ -682,10 +746,17 @@ body.grau .kopf, body.grau .bereiche { background: var(--weiss); }
   }
   .mobil-aktion-info { display: flex; gap: 8px; font-size: 12px; color: var(--text-2); }
   .mobil-aktion-info .fett { color: var(--text); }
-  .pille.breit { width: 100%; justify-content: center; }
   .app:has(.mobil-aktion) { padding-bottom: 200px; }
   .display { font-size: 32px; }
   .at-zeile { padding: 0 16px; }
+  .eintragszeile { flex-wrap: wrap; padding: 8px 16px 8px 4px; gap: 4px 12px; }
+  .eintragszeile .ez-zeit { display: none; }
+  .eintragszeile .ez-h { margin-left: auto; }
+  .eintragszeile .fuellung { order: 10; flex-basis: 100%; padding-left: 56px; white-space: normal; }
+  .eintragszeile .fuellung:empty { display: none; }
+  .karte.vorschau { padding: 24px 16px; }
+  .vt-zeile { grid-template-columns: minmax(0, 1fr) 40px 64px 76px; gap: 6px; font-size: 12px; }
+  .vt-kopf { font-size: 10px; letter-spacing: 0.06em; }
   .weiterarbeiten { display: flex; flex-direction: column; gap: 8px; }
   .timerkarte { border-radius: 16px; }
   .timerkarte-zeit { font-size: 64px; letter-spacing: -0.03em; }
@@ -704,3 +775,6 @@ body.grau .kopf, body.grau .bereiche { background: var(--weiss); }
   .abschluss .pille.gross { flex: 1; }
   .hinweisband { padding: 16px; }
 }
+.ohne-abstand { margin-top: 0; }
+.zeile.umbruch { flex-wrap: wrap; }
+.zeile.umbruch > .fuellung { flex-basis: 100%; }

@@ -1,0 +1,52 @@
+# GitHub Action für das PRIVATE Repo gcad-kapazitaet-daten.
+# Ablage dort: .github/workflows/lexware.yml
+# Secret dort: LEXWARE_API_KEY (in Lexware Office unter Erweiterungen → Public API erzeugen)
+#
+# Startet, sobald die App einen Auftrag in lexware/auftraege/ ablegt (Rechnungs- oder Angebotsentwurf),
+# außerdem einmal am Morgen für die Kontakte und den Verbindungsstand. Legt in Lexware nur Entwürfe an.
+
+name: Lexware Office
+
+on:
+  push:
+    paths:
+      - 'lexware/auftraege/**'
+  schedule:
+    - cron: '30 5 * * 1-6'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lexware
+  cancel-in-progress: false
+
+jobs:
+  uebertragen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: GersterCAD/gcad-kapazitaet
+          path: app
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: An Lexware Office übertragen
+        run: node app/daten-repo/lexware.mjs lexware
+        env:
+          LEXWARE_API_KEY: ${{ secrets.LEXWARE_API_KEY }}
+          KONTAKTE: ${{ github.event_name != 'push' && 'ja' || 'nein' }}
+      - name: Speichern, wenn geändert
+        run: |
+          if [ -n "$(git status --porcelain lexware)" ]; then
+            git config user.name "Lexware"
+            git config user.email "actions@users.noreply.github.com"
+            git add -A lexware
+            git commit -m "Lexware Office abgeglichen"
+            git pull --rebase --autostash
+            git push
+          fi

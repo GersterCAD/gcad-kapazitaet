@@ -1,7 +1,7 @@
 // Rechnungszeilen aus Zeiteinträgen – Vorbereitung für Lexware Office. Ohne Oberfläche, ohne DOM.
 // Standard: je Tag und Projekt eine Zeile, damit viele kleine Einträge (0,5 h + 0,75 h + 2 h) nicht kleinlich wirken.
 
-import { ausText, tagLang } from './datum.js';
+import { ausText, tagLang, tagKurz } from './datum.js';
 import { ist } from './daten.js';
 
 export const ZUSAMMENFASSEN = [
@@ -52,7 +52,7 @@ export const euro = (x) => new Intl.NumberFormat('de-DE', { style: 'currency', c
  * Ergebnis: [{ datum, stunden, satz, betrag, text, positionen: [nr], eintraege: [id] }], nach Datum sortiert.
  * Bei Pauschal-Aufträgen ohne Satz und Betrag (die Stunden sind dann nur zur Information).
  */
-export function rechnungsZeilen(daten, projektId, { von, bis, art } = {}) {
+export function rechnungsZeilen(daten, projektId, { von, bis, art, nur } = {}) {
   art ??= daten.einstellungen.abrechnungZusammenfassen ?? STANDARD_ZUSAMMENFASSEN;
   const p = daten.projekte.find((x) => x.id === projektId);
   const satz = p?.abrechnungsart === 'pauschal' ? null : stundensatz(daten, p).satz;
@@ -61,7 +61,7 @@ export function rechnungsZeilen(daten, projektId, { von, bis, art } = {}) {
     return pos ? `Pos. ${pos.nr} ${pos.bezeichnung}`.trim() : nr ? `Pos. ${nr}` : '';
   };
   const eintraege = daten.zeiteintraege
-    .filter((z) => z.projektId === projektId && !z.abgerechnet && z.stunden > 0 && (!von || z.datum >= von) && (!bis || z.datum <= bis))
+    .filter((z) => z.projektId === projektId && offen(z) && z.stunden > 0 && (!von || z.datum >= von) && (!bis || z.datum <= bis) && (!nur || nur.has(z.id)))
     .sort((a, b) => a.datum.localeCompare(b.datum) || (a.von ?? '').localeCompare(b.von ?? ''));
 
   const gruppen = new Map();
@@ -84,10 +84,16 @@ export function rechnungsZeilen(daten, projektId, { von, bis, art } = {}) {
     if (art === 'einzeln' && g.zeiten.length) teile.push(g.zeiten.join(', '));
     if (g.notizen.length) teile.push(g.notizen.join('; '));
     const stunden = runde(g.stunden);
-    return { datum: g.datum, stunden, satz, betrag: satz ? runde(stunden * satz) : null, text: teile.join(' · '), positionen: g.positionen, eintraege: g.eintraege };
+    // Für Lexware: Leistung „Planungsleistung Fr 23.10.“, darunter Positionen und Notizen (Rechnung.dc.html)
+    const titel = art === 'einzeln' && g.zeiten.length ? `Planungsleistung ${tagKurz(ausText(g.datum))} ${g.zeiten.join(', ')}` : `Planungsleistung ${tagKurz(ausText(g.datum))}`;
+    const beschreibung = [pos.join(', '), g.notizen.join('; ')].filter(Boolean).join(' · ');
+    return { datum: g.datum, stunden, satz, betrag: satz ? runde(stunden * satz) : null, text: teile.join(' · '), titel, beschreibung, positionen: g.positionen, eintraege: g.eintraege };
   });
 }
 
-/** Summe der offenen (nicht abgerechneten) Stunden eines Projekts */
+/** Offen = noch nicht abgerechnet und in keiner Rechnung */
+export const offen = (z) => !z.abgerechnet && !z.rechnungId;
+
+/** Summe der offenen Stunden eines Projekts */
 export const offeneStunden = (daten, projektId) => runde(
-  daten.zeiteintraege.filter((z) => z.projektId === projektId && !z.abgerechnet).reduce((s, z) => s + z.stunden, 0));
+  daten.zeiteintraege.filter((z) => z.projektId === projektId && offen(z)).reduce((s, z) => s + z.stunden, 0));

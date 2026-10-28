@@ -90,8 +90,22 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026, Folge-Entwurf Index B vom 
   - **Zwei Puffer (Joachims Entscheidung):** Positions-Puffer = Zulagen aus der Angebotsplanung (Vorgabe 36 %, wie im Kalkulator 3 + 8 + 5 + 20 %). Beim Einplanen kommt der Planungspuffer 0–20 % als Projekt-Puffer obendrauf. 0 % ist erlaubt.
   - `angebotAnnehmen()`: legt ein Projekt (Status Auftrag) mit den gewählten Positionen an, `sollH` = geplante Stunden, `angebotPositionId` und `preis` an der Projektposition, `angebotId` am Projekt, Meilenstein „Abgabe“ bei Deadline. Nur Pauschal-Positionen → Pauschalprojekt. Nie Samstage oder lange Tage. `annahmeZuruecknehmen()` nur, solange keine Zeit gebucht ist.
 - `js/ansichten/angebote.js`: `#/angebote` (Liste mit Kennzahlen und Filter), `#/angebote/<id>` (bearbeiten, speichert sofort – deshalb kein „Speichern“-Knopf), `#/angebote/<id>/auftrag` (Auftrag einplanen, grauer Hintergrund wie im Entwurf). Positionen bis 1180 px als Karten, am iPhone Summe und Aktion unten fest.
-- Noch offen: „PDF ansehen“ und „An Lexware Office übertragen“ (kommt mit der Lexware-Anbindung über GitHub, der Knopf ist bis dahin ausgegraut), Kunde aus Lexware-Kontakten, Kopf-/Fußtext-Vorlagen.
+- „An Lexware Office übertragen“ legt einen Angebotsentwurf an (`lexwareAngebot()`: Stunden-Positionen als Menge × Satz, Pauschal als 1 × Preis). Noch offen: „PDF ansehen“ (macht Lexware), Kopf-/Fußtext-Vorlagen.
 - Beispieldaten: drei erfundene Angebote (Entwurf, versendet, abgelehnt).
+
+## Rechnungen und Lexware Office (Index B: Abrechnung, Rechnung, Zustände)
+
+- `js/kern/rechnung.js`: `daten.rechnungen = [{ id, projektId, art (stunden | pauschal | abschlag | teil), titel, erstellt, leistungVon, leistungBis, zeilen: [{ titel, beschreibung, menge, einheit, preis, betrag }], eintraege, netto, status, lexwareId, uebertragen, fehler }]`.
+  - Status: `entwurf` (in der App) → `sendet` → `uebertragen` (Entwurf in Lexware) oder `fehler`; ohne Lexware `erledigt` („von Hand abgerechnet“). Beim Anlegen bekommen die Zeiteinträge `rechnungId` (nicht mehr offen), bei `uebertragen`/`erledigt` zusätzlich `abgerechnet`. Löschen gibt sie wieder frei.
+  - Stunden: Zeilen aus `rechnungsZeilen()` („Planungsleistung Fr 23.10.“, darunter Positionen und Notizen), Satz × Stunden. Pauschal = Schlussrechnung (Positionspreise aus dem Angebot oder Pauschalpreis, abzüglich Abschläge und Teilrechnungen, schließt die offenen Stunden mit ab). Abschlag in % vom Pauschalpreis. Teilrechnung = gewählte Positionen mit Preis.
+  - `offenUebersicht()`: je Projekt offene Stunden/Beträge, „länger als 30 Tage“.
+- Ansichten (`js/ansichten/abrechnung.js`): Bereich **Abrechnung** (5. Tab) mit Umschalter Offen · Rechnungen (Nachkalkulation folgt), `#/projekte/<id>/rechnung` = Rechnung erstellen. Projektseite: „Rechnung erstellen“ in „Offen zur Abrechnung“.
+- **Lexware Office über GitHub** (Joachims Entscheidung, sicherer als ein eigener Dienst): die App legt `lexware/auftraege/<id>.json` im privaten Repo ab, die Action `daten-repo/lexware.yml` (dort `.github/workflows/lexware.yml`, Secret `LEXWARE_API_KEY`) startet bei diesem Push, ruft `api.lexware.io` auf (`daten-repo/lexware.mjs`) und schreibt `lexware/ergebnisse/<id>.json`, `status.json`, `kontakte.json`.
+  - Nur drei Arten: `rechnung` (POST /v1/invoices), `angebot` (POST /v1/quotations), `kontakte`. Immer ohne `finalize` → nur Entwürfe. Die Nutzlast wird in der Action aus erlaubten Feldern neu gebaut (`rechnungNutzlast`, `angebotNutzlast`), Datum in deutscher Zeit, Leistungszeitraum als `serviceperiod`. Fehler werden übersetzt, der Originaltext steht unter „Details“.
+  - `js/lexware.js`: Aufträge ablegen, alle 15 s nach dem Ergebnis schauen (offene Aufträge in `meta.lexware`, überleben Neuladen), Kontakt-ID über den Kundennamen (`lexwareKontaktId` am Kunden geht vor). Mit Beispieldaten aus. Der API-Schlüssel kommt nie in die App (Abweichung vom Entwurf, dort Eingabefeld).
+  - Kopfzeile: „Kalender · Lexware“ mit einem Punkt, rot bei Lexware-Fehler. Einstellungen: Karte „Lexware Office verbinden“ mit „Verbindung prüfen“ (= Auftrag `kontakte`).
+  - Anleitung für Joachim: `Kapazitaetsplanung/04_Anleitungen/26-10-28_Anleitung_Lexware-Office-verbinden.pdf`. Tests: `tests/lexware.test.js` (mit nachgebautem fetch).
+- Deeplink nach Lexware: `https://app.lexoffice.de/permalink/<invoices|quotations>/edit/<id>` (in `lexware.link()`).
 
 ## Zeitstopper (ersetzt Tyme)
 

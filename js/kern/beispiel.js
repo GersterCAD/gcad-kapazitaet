@@ -103,7 +103,11 @@ export function beispielDaten() {
   d.kunden.push(
     { id: neueId(), name: 'Café Rösterei', stundensatz: 75 },
     { id: neueId(), name: 'Beispiel Bau GmbH', stundensatz: 72 },
+    { id: neueId(), name: 'Kanzlei Muster', stundensatz: 68 },
   );
+  // Abgeschlossene Projekte sind längst abgerechnet
+  const zu = new Set(d.projekte.filter((p) => p.status === 'abgeschlossen').map((p) => p.id));
+  d.zeiteintraege.forEach((z) => { if (zu.has(z.projektId)) z.abgerechnet = z.datum; });
   const pos = (bezeichnung, beschreibung, grundH, puffer, extra = {}) => ({
     id: neueId(), bezeichnung, beschreibung, grundH, puffer, pufferEinheit: '%', abrechnung: 'stunden', pauschalpreis: null, ...extra,
   });

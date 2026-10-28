@@ -26,3 +26,17 @@ Hier liegen **keine Daten**, nur die Vorlage für das private Repo. Die echten D
 ## Was die Action macht
 
 `app/daten-repo/kalender-holen.mjs` holt die Kalender, löst Serientermine für 60 Tage zurück bis 400 Tage voraus auf und schreibt `kalender.json`. Sie speichert nur, wenn sich etwas geändert hat. Fällt ein Kalender aus, bleibt sein letzter Stand erhalten.
+
+## Lexware Office (Rechnungs- und Angebotsentwürfe)
+
+Der Browser darf Lexware Office nicht direkt aufrufen, und der API-Schlüssel soll nie auf einem Gerät liegen. Deshalb legt die App Aufträge im privaten Repo ab (`lexware/auftraege/`). Die Action `lexware.yml` schickt sie an Lexware Office (`api.lexware.io`) und legt die Antwort zurück (`lexware/ergebnisse/`). Das dauert etwa eine Minute.
+
+1. In Lexware Office unter *Erweiterungen → Public API* einen API-Schlüssel erzeugen (Tarif XL).
+2. Im privaten Repo unter *Settings → Secrets and variables → Actions* das Secret `LEXWARE_API_KEY` anlegen und den Schlüssel einfügen.
+3. `lexware.yml` dort als `.github/workflows/lexware.yml` ablegen.
+4. In der App unter Einstellungen → „Lexware Office verbinden“ auf „Verbindung prüfen“ tippen. Nach etwa einer Minute steht dort „verbunden“ und wie viele Kontakte gelesen wurden.
+5. Den Token in der App **nicht** um das Recht *Workflows* erweitern. Dann kann niemand mit dem Token die Action ändern und an den Schlüssel kommen.
+
+Was die Action darf: nur **Entwürfe** anlegen (Rechnungen und Angebote, nie festschreiben, nie versenden) und Kontakte lesen. Die Nutzlast für Lexware baut sie aus erlaubten Feldern neu. Trennen: das Secret `LEXWARE_API_KEY` löschen.
+
+Ablage im privaten Repo: `lexware/status.json` (verbunden, Konto), `lexware/kontakte.json` (Kundenname und Kontakt-ID, für die Zuordnung), Ergebnisse werden nach 30 Tagen gelöscht.

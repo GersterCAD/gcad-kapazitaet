@@ -17,6 +17,7 @@ export const BEREICHE = [
   { liste: 'vorschlaegeUebernommen', name: 'Vorschlag' },
   { liste: 'kunden', name: 'Kunde' },
   { liste: 'angebote', name: 'Angebot' },
+  { liste: 'rechnungen', name: 'Rechnung' },
 ];
 
 const gleich = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -107,6 +108,7 @@ function titel(liste, x, lokal, entfernt) {
     case 'vorschlaegeUebernommen': return x.titel ?? 'Vorschlag';
     case 'kunden': return x.name;
     case 'angebote': return [x.nummer, x.kunde].filter(Boolean).join(' · ');
+    case 'rechnungen': return `${x.titel ?? 'Rechnung'} · ${projekt(x.projektId)}`;
     default: return x.uid ?? x.id ?? '';
   }
 }

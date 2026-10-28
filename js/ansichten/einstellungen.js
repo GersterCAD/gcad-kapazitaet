@@ -10,6 +10,7 @@ import * as austausch from '../austausch.js';
 import { zusammenfassung, neueId } from '../kern/daten.js';
 import * as kalender from '../kalender.js';
 import * as github from '../github.js';
+import * as lexware from '../lexware.js';
 import * as abgleich from '../abgleich.js';
 import { unterschiede } from '../kern/abgleich.js';
 import { ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN, euro } from '../kern/abrechnung.js';
@@ -42,6 +43,7 @@ export function einstellungen() {
       urlaubKarte(d),
       kalenderKarte(d),
       abrechnungKarte(d),
+      lexwareKarte(d),
       datenKarte(),
     ]),
   ]);
@@ -365,7 +367,7 @@ function abrechnungKarte(d) {
     el('h2', { id: 'h-abr' }, 'Abrechnung'),
     el('p', { class: 'kartentext' }, 'So werden deine Stunden später als Rechnungszeilen an Lexware Office übergeben.'),
     el('div', { class: 'mit-abstand' }, [
-      el('div', { class: 'zeile ohne-linie' }, [
+      el('div', { class: 'zeile ohne-linie umbruch' }, [
         el('div', { class: 'fuellung' }, [
           el('div', { class: 'zeile-titel', id: 'l-zusammen' }, 'Stunden zusammenfassen'),
           el('div', { class: 'zeile-hinweis' }, `${gewaehlt.text}${art === 'tag' ? ' · Standard' : ''}`),
@@ -375,7 +377,47 @@ function abrechnungKarte(d) {
       ]),
     ]),
     kundenSaetze(d),
-    el('p', { class: 'zeile-hinweis' }, 'Die Übergabe an Lexware Office folgt. Auf jeder Projektseite siehst du schon, welche Zeilen offen sind.'),
+  ]);
+}
+
+// ---------- Lexware Office (über GitHub, Einstellungen.dc.html) ----------
+
+function lexwareKarte(d) {
+  const lx = lexware.info();
+  const an = lexware.verbunden();
+  const fehler = lx.status && !lx.status.verbunden && lx.status.fehler && !/fehlt noch/.test(lx.status.fehler) ? lx.status.fehler : null;
+  const prueft = lexware.laeuft('kontakte', 'kontakte');
+  const chip = an ? el('span', { class: 'chip gruen' }, 'verbunden') : fehler ? el('span', { class: 'chip rot' }, 'Fehler') : el('span', { class: 'chip' }, 'nicht verbunden');
+  const meldung = el('div', { class: 'meldung rot', role: 'alert' });
+  const pruefKnopf = el('button', {
+    type: 'button', class: 'pille', disabled: !github.verbunden() || zustand.istBeispiel() || !!prueft, 'data-fokus': 'lx-pruefen',
+    onclick: async () => { try { await lexware.pruefen(); } catch (f) { meldung.textContent = f.message; } },
+  }, prueft ? 'Wird geprüft …' : 'Verbindung prüfen');
+  const verknuepft = (d.kunden ?? []).filter((k) => k.lexwareKontaktId || lx.kontakte.some((c) => c.name.trim().toLowerCase() === k.name.trim().toLowerCase())).length;
+  const zeile = (l, w) => el('div', { class: 'summenzeile linie-unten' }, [el('span', { class: 'sekundaer' }, l), el('span', { class: 'zahl' }, w)]);
+  const zuletzt = lx.zuletzt ? `${zeitText(lx.zuletzt.zeit)} · ${lx.zuletzt.art === 'rechnung' ? 'Rechnung' : lx.zuletzt.art === 'angebot' ? 'Angebot' : 'Prüfung'}${lx.zuletzt.ok ? '' : ' (Fehler)'}` : '–';
+
+  return el('section', { class: `karte${an ? ' grau-karte' : ''}`, 'aria-labelledby': 'h-lx' }, [
+    el('div', { class: 'knopfreihe' }, [el('h2', { id: 'h-lx', class: 'fuellung' }, 'Lexware Office verbinden'), chip]),
+    an ? el('div', { class: 'mit-abstand-mittel' }, [
+      zeile('Konto', lx.status.organisation ?? '–'),
+      zeile('Geprüft', zeitText(lx.status.geprueft)),
+      zeile('Zuletzt übertragen', zuletzt),
+      zeile('Kontakte', `${lx.kontakte.length} gelesen · ${verknuepft} verknüpft`),
+    ]) : el('div', { class: 'stapel mit-abstand-mittel' }, [
+      el('p', { class: 'kartentext' }, 'Damit überträgst du Angebote und Rechnungsentwürfe und liest Kontakte. Der API-Schlüssel liegt nur als Secret in deinem privaten GitHub-Repo, nie in der App.'),
+      el('ol', { class: 'schritte' }, [
+        el('li', {}, 'In Lexware Office unter Erweiterungen → Public API einen Schlüssel erzeugen.'),
+        el('li', {}, ['Im Repo ', el('span', { class: 'fett-mittel' }, github.repo()), ' unter Settings → Secrets and variables → Actions als ', el('code', {}, 'LEXWARE_API_KEY'), ' eintragen.']),
+        el('li', {}, '„Verbindung prüfen“ tippen. Nach etwa einer Minute steht hier „verbunden“.'),
+      ]),
+      fehler ? el('p', { class: 'zeile-hinweis rot' }, fehler) : null,
+      !github.verbunden() ? el('p', { class: 'zeile-hinweis' }, 'Zuerst unten unter „Daten“ mit GitHub verbinden.') : null,
+      zustand.istBeispiel() ? el('p', { class: 'zeile-hinweis' }, 'Mit Beispieldaten ist Lexware Office aus.') : null,
+    ]),
+    el('div', { class: 'knopfreihe eng mit-abstand' }, [pruefKnopf]),
+    meldung,
+    an ? el('p', { class: 'zeile-hinweis' }, 'Trennen: das Secret LEXWARE_API_KEY bei GitHub löschen. Angelegt werden in Lexware immer nur Entwürfe.') : null,
   ]);
 }
 

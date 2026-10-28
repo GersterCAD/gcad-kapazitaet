@@ -156,3 +156,17 @@ export function annahmeZuruecknehmen(daten, angebotId) {
   a.projektId = null;
   return true;
 }
+
+/** Auftrag für die GitHub Action: Angebot als Entwurf in Lexware Office (nur die Felder, die die Action annimmt) */
+export function lexwareAngebot(daten, a) {
+  const { satz } = angebotSatz(daten, a);
+  const k = kundeVon(daten, { kunde: a.kunde });
+  return {
+    art: 'angebot', kontaktId: k?.lexwareKontaktId ?? null, name: a.kunde || 'Kunde',
+    titel: a.projektname || 'Angebot', einleitung: a.kopftext || '', bemerkung: [a.fusstext, a.zahlungsbedingungen].filter(Boolean).join('\n\n'),
+    datum: a.datum, gueltigBis: a.gueltigBis,
+    zeilen: a.positionen.filter((p) => positionsBetrag(p, satz, a.pufferImPreis) > 0).map((p) => (p.abrechnung === 'pauschal'
+      ? { name: p.bezeichnung || 'Position', beschreibung: p.beschreibung || '', menge: 1, einheit: 'Pauschal', preisNetto: p.pauschalpreis }
+      : { name: p.bezeichnung || 'Position', beschreibung: p.beschreibung || '', menge: a.pufferImPreis === false ? p.grundH : geplantH(p), einheit: 'Stunden', preisNetto: satz })),
+  };
+}

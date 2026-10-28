@@ -13,6 +13,8 @@ import { anfragePruefen } from '../kern/anfrage.js';
 import { lernwerte, LERNWERT_AB } from '../kern/lernwert.js';
 import { ausText, alsText, plusTage, tagKurz, isoWoche, montag } from '../kern/datum.js';
 import { loeschKnopf } from './einstellungen.js';
+import * as lexware from '../lexware.js';
+import { lexwareHinweis } from './abrechnung.js';
 import { feiertag } from '../kern/feiertage.js';
 
 const tm = (iso) => (iso ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.` : '–');
@@ -23,7 +25,8 @@ const aendereAngebot = (id, fn) => zustand.aendern((d) => { const a = d.angebote
 const STATUS_CHIP = { entwurf: 'chip', versendet: 'chip rand-stahl', angenommen: 'chip gruen', abgelehnt: 'chip rot' };
 const statusChip = (a) => el('span', { class: STATUS_CHIP[a.status] }, ANGEBOT_STATUS_NAME[a.status]);
 const lexwareStatus = (a) => el('span', { class: 'lexware-status' }, [
-  el('span', { class: `punkt${a.lexwareId ? ' gruen' : ' leer'}`, 'aria-hidden': 'true' }), a.lexwareId ? 'übertragen' : 'nicht übertragen',
+  el('span', { class: `punkt${a.lexwareId ? ' gruen' : a.lexwareFehler ? ' rot' : ' leer'}`, 'aria-hidden': 'true' }),
+  lexware.laeuft('angebot', a.id) ? 'wird übertragen' : a.lexwareId ? 'übertragen' : a.lexwareFehler ? 'Fehler' : 'nicht übertragen',
 ]);
 
 /** Umschalter „Anfragen · Angebote“ rechts neben dem Seitentitel (Navigation.dc.html) */
@@ -132,10 +135,10 @@ export function angebotSeite(id) {
         a.projektId
           ? el('a', { class: 'pille gross', href: `#/projekte/${a.projektId}` }, 'Zum Projekt')
           : el('a', { class: 'pille gross dunkel-rand nur-gross', href: `#/angebote/${id}/auftrag` }, 'Als angenommen markieren'),
-        el('button', { type: 'button', class: 'pille gross haupt nur-gross', disabled: true, title: 'Lexware Office ist noch nicht verbunden' }, 'An Lexware Office übertragen'),
+        lexwareKnopf(a),
       ]),
     ]),
-    el('p', { class: 'zeile-hinweis ohne-abstand' }, 'Lexware Office ist nicht verbunden. Angebote bleiben als Entwurf in der App.'),
+    lexwareZustand(a),
     el('div', { class: 'angebot-flaeche' }, [
       el('div', { class: 'angebot-haupt' }, [kopfKarte(d, a), positionenKarte(d, a, s), fussKarte(a), fest ? null : el('div', { class: 'knopfreihe' }, [loeschKnopf('Angebot löschen', async () => {
         await zustand.sichern('Angebot gelöscht');
@@ -146,6 +149,52 @@ export function angebotSeite(id) {
     ]),
     mobilLeiste(d, a, s),
   ]);
+}
+
+// ---------- Lexware Office ----------
+
+async function anLexware(a) {
+  try { await lexware.angebotSenden(a.id); } catch (f) { await aendereAngebot(a.id, (x) => { x.lexwareFehler = f.message; }); }
+}
+
+function lexwareKnopf(a) {
+  const laeuft = lexware.laeuft('angebot', a.id);
+  if (!lexware.verbunden()) return el('button', { type: 'button', class: 'pille gross haupt nur-gross', disabled: true, title: 'Erst nach dem Verbinden möglich' }, 'An Lexware Office übertragen');
+  return el('button', {
+    type: 'button', class: 'pille gross haupt nur-gross', disabled: !!laeuft, 'data-fokus': 'a-lexware', onclick: () => anLexware(a),
+  }, laeuft ? 'Wird übertragen …' : a.lexwareId ? 'Erneut übertragen' : 'An Lexware Office übertragen');
+}
+
+/** Zustand der Übertragung unter dem Kopf (Zustaende.dc.html) */
+function lexwareZustand(a) {
+  if (!lexware.verbunden()) return lexwareHinweis();
+  const laeuft = lexware.laeuft('angebot', a.id);
+  if (laeuft) {
+    return el('div', { class: 'zustand grau', role: 'status' }, [
+      el('div', { class: 'knopfreihe eng' }, [el('span', { class: 'kreisel', 'aria-hidden': 'true' }), el('span', { class: 'zustand-titel' }, 'Wird übertragen …')]),
+      el('div', { class: 'zeile-hinweis ohne-abstand' }, lexware.dauertLange(laeuft)
+        ? ['Das dauert ungewöhnlich lange. Läuft die GitHub Action „Lexware Office“? ', el('button', { type: 'button', class: 'textknopf', onclick: () => lexware.aufgeben('angebot', a.id) }, 'Abbrechen')]
+        : 'Angebotsentwurf. Das dauert etwa eine Minute. Du kannst weiterarbeiten.'),
+    ]);
+  }
+  if (a.lexwareFehler) {
+    return el('div', { class: 'zustand rot', role: 'alert' }, [
+      el('div', { class: 'zustand-titel rot-text' }, 'Nicht übertragen'),
+      el('div', { class: 'zeile-hinweis ohne-abstand rot-dunkel' }, a.lexwareFehler),
+      el('div', { class: 'knopfreihe eng' }, [
+        el('button', { type: 'button', class: 'pille rot-pille', onclick: () => anLexware(a) }, 'Erneut versuchen'),
+        a.lexwareFehlerDetails ? el('details', { class: 'details' }, [el('summary', {}, 'Details'), el('pre', {}, a.lexwareFehlerDetails)]) : null,
+      ]),
+    ]);
+  }
+  if (a.lexwareId) {
+    return el('div', { class: 'zustand gruen', role: 'status' }, [
+      el('div', { class: 'knopfreihe eng zustand-titel gruen-text' }, [hakenIcon(14), 'Übertragen · Entwurf in Lexware Office']),
+      el('div', { class: 'zeile-hinweis ohne-abstand gruen-dunkel' }, 'Prüfe es dort, schreib es fest und versende es aus Lexware. Danach hier auf „versendet“ stellen.'),
+      el('div', { class: 'knopfreihe eng' }, [el('a', { class: 'pille weiss-pille', href: lexware.link('angebot', a.lexwareId), target: '_blank', rel: 'noopener' }, 'In Lexware öffnen')]),
+    ]);
+  }
+  return null;
 }
 
 function statusKette(a) {
@@ -402,9 +451,11 @@ function mobilLeiste(d, a, s) {
       el('span', { class: 'fuellung' }, `${zahlText(s.geplantH)} h${fertig ? ` · fertig ${tagKurz(ausText(fertig))}` : ''}`),
       el('span', { class: 'fett' }, `${euro(s.netto)} netto`),
     ]),
-    a.projektId
-      ? el('a', { class: 'pille gross haupt breit', href: `#/projekte/${a.projektId}` }, 'Zum Projekt')
-      : el('a', { class: 'pille gross haupt breit', href: `#/angebote/${a.id}/auftrag` }, 'Als angenommen markieren'),
+    lexware.verbunden() && !a.lexwareId && !a.projektId
+      ? el('button', { type: 'button', class: 'pille gross haupt breit', disabled: !!lexware.laeuft('angebot', a.id), onclick: () => anLexware(a) }, 'An Lexware Office übertragen')
+      : a.projektId
+        ? el('a', { class: 'pille gross haupt breit', href: `#/projekte/${a.projektId}` }, 'Zum Projekt')
+        : el('a', { class: 'pille gross haupt breit', href: `#/angebote/${a.id}/auftrag` }, 'Als angenommen markieren'),
   ]);
 }
 
