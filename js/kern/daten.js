@@ -27,6 +27,7 @@ export function standardEinstellungen() {
     samstagErlaubt: 'vorschlag',
     samstagH: 8,
     bundesland: 'BW',
+    timerRundung: 15,
     kalender: [
       { name: 'Gerster CAD', regel: 'alle' },
       { name: 'Privat', regel: 'ganztaegig' },
@@ -47,6 +48,7 @@ export function leereDaten() {
     abwesenheiten: [],
     terminRegeln: [],
     vorschlaegeUebernommen: [],
+    timer: null,
   };
 }
 
@@ -98,11 +100,12 @@ export function pruefeDaten(roh) {
   const d = migriere(structuredClone(roh));
   const basis = leereDaten();
   for (const k of Object.keys(basis)) {
-    if (k === 'schemaVersion' || k === 'einstellungen') continue;
+    if (k === 'schemaVersion' || k === 'einstellungen' || k === 'timer') continue;
     if (d[k] == null) d[k] = [];
     if (!Array.isArray(d[k])) { fehler.push(`„${k}“ ist keine Liste.`); d[k] = []; }
   }
   d.einstellungen = { ...basis.einstellungen, ...(d.einstellungen || {}) };
+  d.timer ??= null;
 
   const e = d.einstellungen;
   zahl(e.regeltagH, 'Regeltag', 0, 24, fehler);
@@ -143,7 +146,10 @@ export function pruefeDaten(roh) {
     bezug(z, wo);
     datum(z?.datum, `${wo}: Datum`, fehler);
     zahl(z?.stunden, `${wo}: Stunden`, 0, 24, fehler);
+    if ((z?.von && !ZEIT.test(z.von)) || (z?.bis && !ZEIT.test(z.bis))) fehler.push(`${wo}: Uhrzeit ungültig (Form 08:00).`);
   });
+  // Laufender Timer: ohne gültiges Projekt oder Startzeit wird er verworfen (kein Fehler)
+  if (d.timer && (!projektIds.has(d.timer.projektId) || Number.isNaN(Date.parse(d.timer.start)))) d.timer = null;
   d.einplanungen.forEach((x, i) => {
     const wo = `Einplanung ${i + 1}`;
     bezug(x, wo);

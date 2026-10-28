@@ -10,3 +10,4 @@ export * from './anfrage.js';
 export * from './lernwert.js';
 export * from './ics.js';
 export * from './abgleich.js';
+export * from './timer.js';

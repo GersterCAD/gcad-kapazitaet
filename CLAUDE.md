@@ -80,6 +80,13 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026.
 - Schreiben über die GitHub-API mit sha: Hat ein anderes Gerät inzwischen geschrieben (409), wird neu geholt und zusammengeführt.
 - Repos: `GersterCAD/gcad-kapazitaet` (öffentlich, GitHub Pages https://gerstercad.github.io/gcad-kapazitaet/) und `GersterCAD/gcad-kapazitaet-daten` (privat, Daten + Kalender-Action). Commits mit der Noreply-Adresse `345525017+GersterCAD@users.noreply.github.com`.
 
+## Zeitstopper (ersetzt Tyme)
+
+- `daten.timer = { projektId, positionNr, notiz, start }` – höchstens einer, liegt in den Daten und kommt per Abgleich auf alle Geräte (zwei verschiedene Timer = Konflikt).
+- `js/kern/timer.js`: Start (stoppt einen laufenden vorher), Stopp → Zeiteinträge mit `von`/`bis` und `quelle: 'timer'`, über Mitternacht je Tag getrennt, gerundet nach `einstellungen.timerRundung` (6, 15 oder 30 Min., Standard 15, mindestens eine Stufe, unter 1 Min. nichts). Anderes Ende für vergessene Timer (ab 10 h fragt die Projektseite).
+- `js/stoppuhr.js`: Bedienung, „Rückgängig“ nach dem Stoppen (Buchung weg, Timer läuft weiter), Sekundenanzeige über `data-timer-lauf` ohne Neuzeichnen. Kopfzeile zeigt den laufenden Timer mit „Stoppen“ in jeder Ansicht.
+- Später Lexware Office (Public API, Tarif XL vorhanden): Rechnungsentwürfe aus Zeiteinträgen. `von`/`bis`/`notiz` sind dafür schon da; ein Merker „abgerechnet“ kommt dann dazu.
+
 - PWA: `manifest.json`, `sw.js` (Netz zuerst, ohne Netz aus dem Cache). **Bei jeder neuen oder geänderten Datei `VERSION` in `sw.js` hochzählen und die Datei in `HUELLE` eintragen.**
 - Schrift: Inter als woff2 in `schrift/` (OFL), nicht von Google laden. Bildzeichen in `bilder/`.
 - Lokal starten: `python3 -m http.server 8130` im Repo, dann http://localhost:8130.

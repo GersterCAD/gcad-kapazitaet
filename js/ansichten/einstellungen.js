@@ -98,6 +98,14 @@ function arbeitszeitKarte(d) {
         ]),
         el('div', { class: 'wahlreihe eng' }, tage),
       ]),
+      el('div', { class: 'zeile' }, [
+        el('div', { class: 'fuellung' }, [
+          el('div', { class: 'zeile-titel', id: 'l-rundung' }, 'Timer runden'),
+          el('div', { class: 'zeile-hinweis' }, 'Gestoppte Zeit auf die nächste Stufe, mindestens eine Stufe'),
+        ]),
+        el('div', { class: 'wahlreihe eng', role: 'group', 'aria-labelledby': 'l-rundung' }, [6, 15, 30].map((m) =>
+          wahlPille(`${m} Min.`, (e.timerRundung ?? 15) === m, () => setze((x) => { x.timerRundung = m; }), { art: 'breit', fokus: `rundung-${m}` }))),
+      ]),
       el('div', { class: 'zeile ohne-linie' }, [
         el('div', { class: 'fuellung' }, [
           el('label', { for: 's-buf', class: 'zeile-titel' }, 'Standard-Puffer'),

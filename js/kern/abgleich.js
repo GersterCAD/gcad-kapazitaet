@@ -44,6 +44,14 @@ export function zusammenfuehren(basis, lokal, entfernt) {
   }
   daten.einstellungen = e;
 
+  // Laufender Timer: ein Wert für alles
+  {
+    const b = basis.timer ?? null, l = lokal.timer ?? null, r = entfernt.timer ?? null;
+    if (gleich(l, r) || gleich(b, r)) daten.timer = l;
+    else if (gleich(b, l)) daten.timer = r;
+    else { daten.timer = l; konflikte.push({ schluessel: 'timer', bereich: 'timer', name: 'Timer', titel: 'läuft auf zwei Geräten', lokal: l, entfernt: r }); }
+  }
+
   for (const { liste, name, schluessel = 'id' } of BEREICHE) {
     const B = nachId(basis[liste], schluessel), L = nachId(lokal[liste], schluessel), R = nachId(entfernt[liste], schluessel);
     const ergebnis = [];
@@ -72,6 +80,7 @@ export function konflikteLoesen(ergebnis, wahl = {}) {
   for (const k of ergebnis.konflikte) {
     const wert = wahl[k.schluessel] === 'entfernt' ? k.entfernt : k.lokal;
     if (k.bereich === 'einstellungen') { daten.einstellungen[k.titel] = wert; continue; }
+    if (k.bereich === 'timer') { daten.timer = wert; continue; }
     const s = BEREICHE.find((x) => x.liste === k.bereich).schluessel ?? 'id';
     const id = k.schluessel.slice(k.bereich.length + 1);
     const i = daten[k.bereich].findIndex((x) => String(x[s]) === id);
@@ -103,7 +112,7 @@ const FELD_NAME = {
   start: 'Start', deadline: 'Deadline', prioritaet: 'Priorität', positionen: 'Positionen', datum: 'Datum', titel: 'Titel',
   typ: 'Typ', erledigt: 'erledigt', erinnerungTage: 'Erinnerung', stunden: 'Stunden', positionNr: 'Position', notiz: 'Notiz',
   von: 'von', bis: 'bis', stundenProWoche: 'Stunden pro Woche', wochentag: 'Tage', kuerzbar: 'kürzbar', zaehltH: 'zählt', projektId: 'Projekt',
-  regeltagH: 'Regeltag', maxTagH: 'Längster Tag', warnWochen: 'Warngrenze', standardPuffer: 'Standard-Puffer', samstagErlaubt: 'Samstag', kalender: 'Kalender',
+  regeltagH: 'Regeltag', timerRundung: 'Timer-Rundung', maxTagH: 'Längster Tag', warnWochen: 'Warngrenze', standardPuffer: 'Standard-Puffer', samstagErlaubt: 'Samstag', kalender: 'Kalender',
 };
 
 function wertText(v, feld) {
@@ -118,6 +127,10 @@ function wertText(v, feld) {
 
 /** Unterschiede eines Konflikts in Worten: [{ feld, lokal, entfernt }]; gelöscht auf einer Seite = ein Eintrag „gelöscht“ */
 export function unterschiede(k) {
+  if (k.bereich === 'timer') {
+    const t = (x) => (x ? `seit ${new Date(x.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}` : 'gestoppt');
+    return [{ feld: 'Timer', lokal: t(k.lokal), entfernt: t(k.entfernt) }];
+  }
   if (k.bereich === 'einstellungen') return [{ feld: FELD_NAME[k.titel] ?? k.titel, lokal: wertText(k.lokal, k.titel), entfernt: wertText(k.entfernt, k.titel) }];
   if (!k.lokal || !k.entfernt) return [{ feld: 'Eintrag', lokal: k.lokal ? 'geändert' : 'gelöscht', entfernt: k.entfernt ? 'geändert' : 'gelöscht' }];
   const felder = [...new Set([...Object.keys(k.lokal), ...Object.keys(k.entfernt)])].filter((f) => f !== 'id' && !gleich(k.lokal[f], k.entfernt[f]));

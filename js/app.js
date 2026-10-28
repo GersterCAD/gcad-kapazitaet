@@ -14,6 +14,8 @@ import * as zustand from './zustand.js';
 import * as kalender from './kalender.js';
 import * as github from './github.js';
 import * as abgleich from './abgleich.js';
+import * as stoppuhr from './stoppuhr.js';
+import { laufzeit, dauerText } from './kern/timer.js';
 
 const BEREICHE = [
   { id: 'uebersicht', name: 'Übersicht' },
@@ -79,6 +81,24 @@ function kalenderStatus() {
   ]);
 }
 
+// Laufender Timer: in jeder Ansicht oben sichtbar, mit Stopp
+function timerAnzeige() {
+  const t = stoppuhr.laeuft();
+  if (!t) return null;
+  const p = zustand.aktuell().projekte.find((x) => x.id === t.projektId);
+  return el('div', { class: 'kopf-timer' }, [
+    el('a', { href: `#/projekte/${t.projektId}`, class: 'kopf-timer-link', title: 'Zum Projekt' }, [
+      el('span', { class: 'punkt laeuft', 'aria-hidden': 'true' }),
+      el('span', { class: 'zahl fett-mittel', 'data-timer-lauf': '' }, dauerText(laufzeit(t))),
+      el('span', { class: 'kopf-timer-name' }, `${p?.name ?? 'Projekt'}${t.positionNr ? ` · Pos. ${t.positionNr}` : ''}`),
+    ]),
+    el('button', {
+      type: 'button', class: 'pille', 'data-fokus': 'kopf-timer-stopp', 'aria-label': 'Timer stoppen und Zeit buchen',
+      onclick: async () => { await stoppuhr.stoppen(); location.hash = `#/projekte/${t.projektId}`; },
+    }, 'Stoppen'),
+  ]);
+}
+
 function kopfzeile(a) {
   return el('header', { class: 'kopf' }, [
     el('a', { class: 'kopf-marke', href: '#/uebersicht' }, [
@@ -89,6 +109,7 @@ function kopfzeile(a) {
     el('div', { class: 'kopf-kontext' }, a.kontext),
     zustand.istBeispiel() ? el('a', { class: 'chip', href: '#/einstellungen', title: 'Beispieldaten in den Einstellungen abschalten' }, 'Beispieldaten') : null,
     el('div', { class: 'fuellung' }),
+    timerAnzeige(),
     a.kalenderStatus ? kalenderStatus() : null,
     a.status ? el('span', { class: 'kopf-status' }, a.status) : null,
     a.aktionen
@@ -151,7 +172,7 @@ zustand.abonnieren(zeigen);
 kalender.abonnieren(zeigen);
 abgleich.abonnieren(zeigen);
 Promise.all([zustand.starten(), github.starten(), kalender.starten(), abgleich.starten()])
-  .then(() => { kalender.automatisch(); abgleich.automatisch(); })
+  .then(() => { kalender.automatisch(); abgleich.automatisch(); stoppuhr.ticken(); })
   .catch((f) => console.error('Daten konnten nicht geladen werden:', f))
   .finally(zeigen);
 
