@@ -235,7 +235,7 @@ h2.label { font-size: 11px; font-weight: 500; letter-spacing: 0.12em; line-heigh
 
 /* Positionen im Formular */
 .ganze-breite { grid-column: 1 / -1; }
-.positionsform { display: grid; max-width: 720px; grid-template-columns: 72px 1fr 96px 44px; gap: 8px; align-items: center; padding: 4px 0; }
+.positionsform { display: grid; max-width: 920px; grid-template-columns: 72px 1fr 96px 200px 44px; gap: 8px; align-items: center; padding: 4px 0; }
 .positionsform .feld { width: 100%; min-width: 0; height: 44px; }
 .positionsform.kopfzeile { padding-bottom: 0; }
 
@@ -701,7 +701,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
   .meilenstein .spalte-datum { width: auto; padding-top: 8px; }
   .meilenstein-text { min-width: 0; padding: 2px 0; }
   .meilenstein .erinnerung { grid-column: 2; padding-bottom: 4px; }
-  .positionsform { grid-template-columns: 56px 1fr 72px 44px; }
+  .positionsform { grid-template-columns: 56px 1fr 72px 44px; grid-template-areas: "nr bez h x" ". art art ."; }
+  .positionsform > :nth-child(1) { grid-area: nr; } .positionsform > :nth-child(2) { grid-area: bez; } .positionsform > :nth-child(3) { grid-area: h; } .positionsform > :nth-child(4) { grid-area: art; } .positionsform > :nth-child(5) { grid-area: x; }
+  .positionsform.kopfzeile > :nth-child(4) { display: none; }
   .kennzahl { font-size: 26px; }
   /* iPhone nach iPhone.dc.html: Seitentitel oben, Tab-Leiste unten, Timer als Leiste darüber */
   .kopf { flex-wrap: nowrap; min-height: 52px; gap: 8px; }
@@ -804,3 +806,34 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
   .zulage > .kreuz { grid-area: weg; }
 }
 .zulage-eingabe .zulage-wert { width: 64px; }
+
+/* Nachkalkulation (Nachkalkulation.dc.html, NachkalkUebersicht.dc.html) */
+.ergebnis-pille { display: inline-flex; align-items: center; gap: 12px; padding: 12px 20px; border-radius: var(--radius-pille); font-size: 13px; }
+.ergebnis-pille .fett { font-size: 15px; }
+.ergebnis-pille.gruen { background: var(--gruen-bg); color: var(--gruen); }
+.ergebnis-pille.gelb { background: var(--gelb-bg); color: var(--gelb); }
+.ergebnis-pille.rot { background: var(--rot-bg); color: var(--rot); }
+.chip.klein-chip { margin-left: 8px; padding: 1px 8px; font-size: 10px; }
+.balken-ist.rot { background: var(--rot); }
+.positionsabw { width: 56px; text-align: right; font-size: 13px; }
+.ergebnisrechnung { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 8px 32px; }
+.summenzeile.fett { font-weight: 600; }
+.kostenzeile { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--linie); font-size: 13px; }
+.kostenzeile .kreuz { margin-right: -12px; }
+.block { display: block; }
+.chip.weiss-chip { background: var(--weiss); color: var(--text-3); }
+.kachel.weiss-kachel { background: var(--weiss); }
+.lern-titel { font-size: 20px; font-weight: 600; line-height: 1.3; }
+.stufe { display: flex; align-items: center; gap: 12px; font-size: 13px; opacity: 0.55; }
+.stufe.aktiv { opacity: 1; font-weight: 500; }
+.chip.stufen-chip { width: 112px; justify-content: center; text-align: center; }
+.kachel.dunkel-kachel { background: var(--text); color: var(--weiss); }
+.kachel.dunkel-kachel .label, .kachel.dunkel-kachel .kachel-unter { color: #C7C7CC; }
+.gross-abstand { gap: 24px; }
+.gruppenraster { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 16px; }
+.kachel.klein-kachel { padding: 16px 20px; }
+.gruppen-wert { font-size: 20px; font-weight: 600; }
+.nktabelle { min-width: 1000px; }
+.nk-zeile { display: grid; grid-template-columns: 1.6fr 1.1fr 110px 90px 110px 110px 80px 110px 130px; gap: 12px; align-items: center; min-height: 52px; padding: 0 24px; border-bottom: 1px solid var(--leiste); font-size: 13px; color: var(--text); text-decoration: none; }
+a.nk-zeile:hover { color: var(--text); background: var(--leiste); }
+.nk-kopf { min-height: 0; padding-top: 8px; padding-bottom: 8px; border-top: 1px solid var(--linie); border-bottom-color: var(--linie); background: var(--leiste); }

@@ -79,6 +79,7 @@ export function projektseite(id) {
       ]),
       el('div', { class: 'knopfreihe' }, [
         ['anfrage', 'angebot'].includes(p.status) ? el('a', { class: 'pille hoch', href: `#/anfragen/${p.id}` }, 'Anfrage prüfen') : null,
+        STATUS_FEST.includes(p.status) || ['abgeschlossen', 'pausiert'].includes(p.status) ? el('a', { class: 'pille hoch', href: `#/projekte/${p.id}/nachkalkulation` }, 'Nachkalkulation') : null,
         el('a', { class: 'pille hoch', href: `#/projekte/${p.id}/bearbeiten` }, 'Projekt bearbeiten'),
       ]),
     ]),

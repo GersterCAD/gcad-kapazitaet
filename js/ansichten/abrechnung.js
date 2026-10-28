@@ -16,11 +16,12 @@ import { loeschKnopf } from './einstellungen.js';
 const tm = (iso) => (iso ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.` : '–');
 const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
-/** Umschalter „Offen · Rechnungen“ (Nachkalkulation folgt) */
-function unterseiten(aktiv) {
+/** Umschalter „Offen · Rechnungen · Nachkalkulation“ */
+export function unterseiten(aktiv) {
   return el('nav', { class: 'umschalter', 'aria-label': 'Unterseite' }, [
     el('a', { href: '#/abrechnung', 'aria-current': aktiv === 'offen' ? 'page' : null }, 'Offen'),
     el('a', { href: '#/abrechnung/rechnungen', 'aria-current': aktiv === 'rechnungen' ? 'page' : null }, 'Rechnungen'),
+    el('a', { href: '#/abrechnung/nachkalkulation', 'aria-current': aktiv === 'nachkalkulation' ? 'page' : null }, 'Nachkalkulation'),
   ]);
 }
 

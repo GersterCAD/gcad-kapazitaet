@@ -45,6 +45,7 @@ export function einstellungen() {
       kalenderKarte(d),
       abrechnungKarte(d),
       lexwareKarte(d),
+      nachkalkKarte(d),
       datenKarte(),
     ]),
   ]);
@@ -381,6 +382,43 @@ function abrechnungKarte(d) {
     el('div', { class: 'label mit-abstand-gross', id: 'l-zulagen' }, 'Zulagen für neue Angebote'),
     el('p', { class: 'zeile-hinweis' }, 'Wie im Kalkulator. Jedes neue Angebot startet damit, im Angebot änderst du sie einzeln.'),
     el('div', { class: 'mit-abstand-mittel', role: 'group', 'aria-labelledby': 'l-zulagen' }, zulagenEditor(d.einstellungen.angebotZulagen ?? [], (fn) => setze((e) => { e.angebotZulagen ??= []; fn(e.angebotZulagen); }), { prefix: 'ezl', mitErgebnis: false })),
+  ]);
+}
+
+// ---------- Nachkalkulation (wie im Werkzeug „Nachkalk“, ohne eigenen Entwurf) ----------
+
+let fixkosten = '';
+
+function nachkalkKarte(d) {
+  const n = { zielSatz: null, selbstkosten: null, jahresstunden: null, kmSatz: 0.3, ...(d.einstellungen.nachkalk ?? {}) };
+  const zahlFeld = (key, label, hinweis, step = '0.01') => {
+    const f = el('input', {
+      class: 'feld zahl satzfeld', type: 'number', min: '0', step, inputmode: 'decimal', value: n[key] ?? '', 'aria-label': label, 'data-fokus': `nk-${key}`,
+      onchange: () => setze((e) => { e.nachkalk = { ...n, [key]: f.value === '' ? null : Math.round(Number(f.value) * 100) / 100 }; }),
+    });
+    return el('div', { class: 'zeile schmal' }, [el('div', { class: 'fuellung' }, [el('div', { class: 'zeile-titel' }, label), el('div', { class: 'zeile-hinweis' }, hinweis)]), f]);
+  };
+  const fix = el('input', { class: 'feld zahl satzfeld', type: 'number', min: '0', step: '100', inputmode: 'decimal', value: fixkosten, placeholder: '€ im Jahr', 'aria-label': 'Fixkosten im Jahr', oninput: () => { fixkosten = fix.value; ergebnis.textContent = rechne(); } });
+  const rechne = () => (!(n.jahresstunden > 0) ? 'Erst die produktiven Stunden eintragen.' : Number(fixkosten) > 0 ? `= ${euro(Math.round(Number(fixkosten) / n.jahresstunden * 100) / 100)} je Stunde` : `÷ ${zahlText(n.jahresstunden)} h`);
+  const ergebnis = el('span', { class: 'zeile-hinweis' }, rechne());
+  return el('section', { class: 'karte', 'aria-labelledby': 'h-nk' }, [
+    el('h2', { id: 'h-nk' }, 'Nachkalkulation'),
+    el('p', { class: 'kartentext' }, 'Grundlage für Ist-Stundensatz, Gewinn und Ampel. Grün ab Ziel-Satz, gelb deckt die Selbstkosten, rot darunter.'),
+    el('div', { class: 'mit-abstand' }, [
+      zahlFeld('zielSatz', 'Ziel-Stundensatz', 'Wenn Kunde und Auftrag keinen eigenen Satz haben'),
+      zahlFeld('selbstkosten', 'Selbstkostensatz', 'Fixkosten im Jahr ÷ produktive Stunden, ohne Unternehmerlohn'),
+      zahlFeld('jahresstunden', 'Produktive Stunden im Jahr', 'Was du wirklich verrechnen kannst', '10'),
+      zahlFeld('kmSatz', 'km-Satz', 'Für Fahrten (km × Satz)'),
+    ]),
+    el('div', { class: 'kachel klein mit-abstand' }, [
+      el('div', { class: 'zeile-titel' }, 'Rechenhilfe Selbstkostensatz'),
+      el('div', { class: 'zeile-hinweis' }, 'Büro, Software-Abos, Hardware, Versicherungen, Fahrzeug, Steuerberater, Fortbildung, Beiträge.'),
+      el('div', { class: 'knopfreihe eng mit-abstand-mittel' }, [fix, ergebnis,
+        el('button', {
+          type: 'button', class: 'pille', disabled: !(n.jahresstunden > 0), 'data-fokus': 'nk-fix-uebernehmen',
+          onclick: () => { if (Number(fixkosten) > 0 && n.jahresstunden > 0) setze((e) => { e.nachkalk = { ...n, selbstkosten: Math.round(Number(fixkosten) / n.jahresstunden * 100) / 100 }; }); },
+        }, 'Übernehmen')]),
+    ]),
   ]);
 }
 

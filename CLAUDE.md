@@ -110,6 +110,19 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026, Folge-Entwurf Index B vom 
   - Anleitung für Joachim: `Kapazitaetsplanung/04_Anleitungen/26-10-28_Anleitung_Lexware-Office-verbinden.pdf`. Tests: `tests/lexware.test.js` (mit nachgebautem fetch).
 - Deeplink nach Lexware: `https://app.lexoffice.de/permalink/<invoices|quotations>/edit/<id>` (in `lexware.link()`).
 
+## Nachkalkulation (Index B: Nachkalkulation, NachkalkUebersicht)
+
+- Rechnet wie Joachims Werkzeug „Nachkalk“ (Kalkulator-Modul, Analyse: `Kapazitaetsplanung/05_Analyse/26-10-28_Analyse_Nachkalkulation.md`). `js/kern/nachkalkulation.js`:
+  - Ist je Position aus den Zeiteinträgen. Zeit ohne Position wird nach Preisanteil verteilt, auf Positionen ohne eigene Buchung, sonst auf alle (Mischbetrieb). Zeit auf abgelehnten Positionen zählt nicht.
+  - Erlös je Position: Preis aus dem Angebot, sonst Pauschalpreis nach Soll-Anteil, sonst Ist × Satz (Satz von Auftrag/Kunde, sonst Ziel-Satz als Annahme). Status `unverguetet` = Erlös 0, `abgelehnt` = fällt raus.
+  - Kosten `daten.kosten = [{ id, projektId, art (material | fremd | reise | sonstiges), bez, datum, betrag, km?, positionNr, weiter }]`. Fahrt: Betrag = km × km-Satz beim Eintragen. Ohne Position nach Erlösanteil umgelegt.
+  - Kennzahlen: DB, Marge, **Ist-Satz = DB ÷ Ist**, Soll-Satz, Gewinn (DB − Ist × Selbstkosten), nicht erlöste Mehrleistung, Break-even, Kapazitätsbindung.
+  - **Ampel nach Joachims Regel** (nicht die 10-%-Regel aus dem Entwurf): grün ≥ Ziel-Satz, gelb deckt die Selbstkosten, rot darunter.
+  - Einstellungen `einstellungen.nachkalk = { zielSatz, selbstkosten, jahresstunden, kmSatz }` (Standard ohne Joachims Werte, die trägt er selbst ein). Rechenhilfe Fixkosten ÷ Jahresstunden.
+- Projektpositionen: `typ` (auftrag | nachtrag | regie), `status` (verguetet | unverguetet | abgelehnt), im Projektformular als „Art“. Das Formular behält beim Speichern alle Felder der Position (`preis`, `angebotPositionId` …).
+- Ansichten (`js/ansichten/nachkalkulation.js`): `#/projekte/<id>/nachkalkulation` (Knopf „Nachkalkulation“ auf der Projektseite) und `#/abrechnung/nachkalkulation` (dritter Reiter unter Abrechnung). Laufende Projekte: „vorläufig“, Abweichung erst nach Abschluss. Ergebnisrechnung und Kostenformular ohne eigenen Entwurf.
+- Später: Export Excel/PDF. Alte Aufträge aus dem Werkzeug werden nicht übernommen.
+
 ## Zeitstopper (ersetzt Tyme)
 
 - `daten.timer = { projektId, positionNr, notiz, start }` – höchstens einer, liegt in den Daten und kommt per Abgleich auf alle Geräte (zwei verschiedene Timer = Konflikt).

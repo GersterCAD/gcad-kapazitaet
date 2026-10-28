@@ -106,6 +106,12 @@ export function beispielDaten() {
     { id: neueId(), name: 'Beispiel Bau GmbH', stundensatz: 72 },
     { id: neueId(), name: 'Kanzlei Muster', stundensatz: 68 },
   );
+  // Nachkalkulation: erfundene Werte zum Ausprobieren
+  d.einstellungen.nachkalk = { zielSatz: 72, selbstkosten: 35, jahresstunden: 1300, kmSatz: 0.3 };
+  d.kosten.push(
+    { id: neueId(), projektId: id.frankfurt, art: 'reise', bez: 'Aufmaß vor Ort', datum: '2026-10-26', km: 120, betrag: 36, positionNr: null, weiter: false },
+    { id: neueId(), projektId: id.alt1, art: 'material', bez: 'Plots', datum: '2026-03-20', betrag: 24, positionNr: null, weiter: false },
+  );
   // Abgeschlossene Projekte sind längst abgerechnet
   const zu = new Set(d.projekte.filter((p) => p.status === 'abgeschlossen').map((p) => p.id));
   d.zeiteintraege.forEach((z) => { if (zu.has(z.projektId)) z.abgerechnet = z.datum; });

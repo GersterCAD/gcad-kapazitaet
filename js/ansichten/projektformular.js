@@ -143,7 +143,7 @@ export function projektformular(id = null) {
     f.positionen.length
       ? el('div', { class: 'mit-abstand' }, [
           el('div', { class: 'positionsform kopfzeile', 'aria-hidden': 'true' }, [
-            el('span', { class: 'feld-label' }, 'Nr.'), el('span', { class: 'feld-label' }, 'Bezeichnung'), el('span', { class: 'feld-label' }, 'Soll h'), el('span'),
+            el('span', { class: 'feld-label' }, 'Nr.'), el('span', { class: 'feld-label' }, 'Bezeichnung'), el('span', { class: 'feld-label' }, 'Soll h'), el('span', { class: 'feld-label' }, 'Art'), el('span'),
           ]),
           ...f.positionen.map((x, i) => {
             const nr = el('input', { class: 'feld zahl', type: 'text', value: x.nr, 'aria-label': `Nummer Position ${i + 1}`, oninput: () => { x.nr = nr.value.trim(); } });
@@ -156,7 +156,18 @@ export function projektformular(id = null) {
                 schaetzung.value = String(sum); zeigeSoll();
               },
             });
-            return el('div', { class: 'positionsform' }, [nr, bez, h, el('button', {
+            // Art für die Nachkalkulation: Auftrag, Nachtrag (vergütet oder nicht), Regie, abgelehnt
+            const artWert = x.status === 'abgelehnt' ? 'abgelehnt' : x.typ === 'nachtrag' ? (x.status === 'unverguetet' ? 'nachtrag-frei' : 'nachtrag') : x.typ === 'regie' ? 'regie' : 'auftrag';
+            const art = el('select', {
+              class: 'feld', 'aria-label': `Art Position ${i + 1}`,
+              onchange: () => {
+                const [typ, status] = { auftrag: ['auftrag', 'verguetet'], nachtrag: ['nachtrag', 'verguetet'], 'nachtrag-frei': ['nachtrag', 'unverguetet'], regie: ['regie', 'verguetet'], abgelehnt: [x.typ ?? 'auftrag', 'abgelehnt'] }[art.value];
+                x.typ = typ; x.status = status;
+              },
+            }, [['auftrag', 'Auftrag'], ['nachtrag', 'Nachtrag'], ['nachtrag-frei', 'Nachtrag · nicht vergütet'], ['regie', 'Regie'], ['abgelehnt', 'abgelehnt']].map(([v, t]) => {
+              const o = el('option', { value: v }, t); if (v === artWert) o.selected = true; return o;
+            }));
+            return el('div', { class: 'positionsform' }, [nr, bez, h, art, el('button', {
               type: 'button', class: 'kreuz', 'aria-label': `Position ${x.nr || i + 1} entfernen`,
               onclick: () => { f.positionen.splice(i, 1); neu(); },
             }, [kreuzIcon()])]);
@@ -234,7 +245,8 @@ async function speichern(p) {
   f.fehler = pruefen(f);
   if (f.fehler.length) { zustand.neuZeichnen(); return; }
 
-  const positionen = f.positionen.map((x) => ({ nr: x.nr, bezeichnung: x.bezeichnung.trim(), sollH: Math.round(Number(x.sollH) * 10) / 10 }));
+  // Weitere Felder (Preis aus dem Angebot, Typ, Status) bleiben erhalten
+  const positionen = f.positionen.map(({ alt, ...x }) => ({ ...x, nr: x.nr, bezeichnung: x.bezeichnung.trim(), sollH: Math.round(Number(x.sollH) * 10) / 10 }));
   const schaetzungH = positionen.length ? Math.round(positionen.reduce((a, x) => a + x.sollH, 0) * 10) / 10 : Math.round(Number(f.schaetzungH) * 10) / 10;
   const werte = {
     nr: f.nr.trim(), name: f.name.trim(), kunde: f.kunde.trim(), art: f.art.trim(), status: f.status,

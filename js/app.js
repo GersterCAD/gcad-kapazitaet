@@ -8,7 +8,8 @@ import { uebersicht } from './ansichten/uebersicht.js';
 import { kalenderSeite, kalenderVergessen } from './ansichten/kalender.js';
 import { anfrageSeite, anfrageKopf, anfrageVergessen } from './ansichten/anfrage.js';
 import { projektliste } from './ansichten/projekte.js';
-import { abrechnungOffen, rechnungenListe, rechnungSeite, rechnungKopf, rechnungVergessen } from './ansichten/abrechnung.js';
+import { abrechnungOffen, rechnungenListe, rechnungSeite, rechnungKopf, rechnungVergessen, unterseiten } from './ansichten/abrechnung.js';
+import { nachkalkSeite, nachkalkKopf, nachkalkUebersichtSeite } from './ansichten/nachkalkulation.js';
 import * as lexware from './lexware.js';
 import { angeboteListe, angebotSeite, angebotKopf, auftragSeite, auftragVergessen } from './ansichten/angebote.js';
 import { projektseite, projektKontext } from './ansichten/projekt.js';
@@ -58,6 +59,7 @@ const ANSICHTEN = {
   anfragen: () => ({ bereich: 'angebote', titel: 'Anfrage prüfen', ...anfrageKopf(null), voll: true, inhalt: anfrageSeite(null) }),
   angebote: () => ({ bereich: 'angebote', kontext: 'Angebote', inhalt: angeboteListe() }),
   abrechnung: () => ({ bereich: 'abrechnung', kontext: 'Abrechnung', inhalt: abrechnungOffen() }),
+  'abrechnung/nachkalkulation': () => ({ bereich: 'abrechnung', titel: 'Nachkalkulation', kontext: 'Nachkalkulation', inhalt: nachkalkUebersichtSeite(unterseiten('nachkalkulation')) }),
   'abrechnung/rechnungen': () => ({ bereich: 'abrechnung', titel: 'Rechnungen', kontext: 'Rechnungen', inhalt: rechnungenListe() }),
   kalender: () => ({
     bereich: 'kalender',
@@ -153,6 +155,8 @@ function ansichtFuer(pfad) {
     if (an[2]) return { bereich: 'angebote', titel: 'Auftrag einplanen', zurueck: `#/angebote/${an[1]}`, kontext: 'Auftrag einplanen', grau: true, schmal: true, inhalt: auftragSeite(an[1]) };
     return { bereich: 'angebote', ...angebotKopf(an[1]), inhalt: angebotSeite(an[1]) };
   }
+  const nk = pfad.match(/^projekte\/([^/]+)\/nachkalkulation$/);
+  if (nk) return { bereich: 'abrechnung', ...nachkalkKopf(nk[1]), inhalt: nachkalkSeite(nk[1]) };
   const r = pfad.match(/^projekte\/([^/]+)\/rechnung$/);
   if (r) return { bereich: 'abrechnung', ...rechnungKopf(r[1]), inhalt: rechnungSeite(r[1]) };
   const m = pfad.match(/^projekte\/([^/]+)(\/bearbeiten)?$/);

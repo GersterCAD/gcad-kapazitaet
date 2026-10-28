@@ -32,6 +32,7 @@ export function standardEinstellungen() {
     timerRundung: 15,
     abrechnungZusammenfassen: 'tag',
     angebotZulagen: STANDARD_ZULAGEN.map((z) => ({ ...z })),
+    nachkalk: { zielSatz: null, selbstkosten: null, jahresstunden: null, kmSatz: 0.3 },
     kalender: [
       { name: 'Gerster CAD', regel: 'alle' },
       { name: 'Privat', regel: 'ganztaegig' },
@@ -56,6 +57,7 @@ export function leereDaten() {
     kunden: [],
     angebote: [],
     rechnungen: [],
+    kosten: [],
   };
 }
 
@@ -121,6 +123,10 @@ export function pruefeDaten(roh) {
   zahl(e.standardPuffer, 'Standard-Puffer', 0, 20, fehler);
   if (e.maxTagH < e.regeltagH) fehler.push('Der längste Tag ist kürzer als der Regeltag.');
   if (!Array.isArray(e.angebotZulagen)) e.angebotZulagen = basis.einstellungen.angebotZulagen;
+  e.nachkalk = { ...basis.einstellungen.nachkalk, ...(e.nachkalk ?? {}) };
+  for (const [k, n] of [['zielSatz', 'Ziel-Stundensatz'], ['selbstkosten', 'Selbstkostensatz'], ['jahresstunden', 'Jahresstunden'], ['kmSatz', 'km-Satz']]) {
+    if (e.nachkalk[k] != null) zahl(e.nachkalk[k], n, 0, 100000, fehler);
+  }
 
   const projektIds = new Set();
   d.projekte.forEach((p, i) => {
@@ -198,6 +204,18 @@ export function pruefeDaten(roh) {
     if (r && !Array.isArray(r.zeilen)) r.zeilen = [];
     if (r && !Array.isArray(r.eintraege)) r.eintraege = [];
   });
+  d.kosten.forEach((k, i) => {
+    const wo = `Kosten ${i + 1}${k?.bez ? ` (${k.bez})` : ''}`;
+    if (!k?.id) fehler.push(`${wo}: ID fehlt.`);
+    bezug(k, wo);
+    if (!['material', 'fremd', 'reise', 'sonstiges'].includes(k?.art)) fehler.push(`${wo}: Art „${k?.art}“ unbekannt.`);
+    zahl(k?.betrag, `${wo}: Betrag`, -10000000, 10000000, fehler);
+    datum(k?.datum, `${wo}: Datum`, fehler, true);
+  });
+  d.projekte.forEach((p) => (p.positionen ?? []).forEach((x) => {
+    if (x.typ && !['auftrag', 'nachtrag', 'regie'].includes(x.typ)) fehler.push(`Projekt ${p.name}, Pos. ${x.nr}: Typ „${x.typ}“ unbekannt.`);
+    if (x.status && !['verguetet', 'unverguetet', 'abgelehnt'].includes(x.status)) fehler.push(`Projekt ${p.name}, Pos. ${x.nr}: Status „${x.status}“ unbekannt.`);
+  }));
   // Laufender Timer: ohne gültiges Projekt oder Startzeit wird er verworfen (kein Fehler)
   if (d.timer && (!projektIds.has(d.timer.projektId) || Number.isNaN(Date.parse(d.timer.start)))) d.timer = null;
   d.einplanungen.forEach((x, i) => {
