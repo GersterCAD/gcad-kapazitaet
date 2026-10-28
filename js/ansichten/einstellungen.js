@@ -10,12 +10,14 @@ import * as austausch from '../austausch.js';
 import { zusammenfassung, neueId } from '../kern/daten.js';
 import * as kalender from '../kalender.js';
 import * as github from '../github.js';
+import * as abgleich from '../abgleich.js';
+import { unterschiede } from '../kern/abgleich.js';
 import { meilensteineExportieren, offeneMeilensteine } from './kalender.js';
 import { feiertageBW, feiertag } from '../kern/feiertage.js';
 import { abwesenheit } from '../kern/kapazitaet.js';
 import { ausText, alsText, plusTage, tagKurz, tagLang } from '../kern/datum.js';
 
-const ANLASS = { export: 'beim Export', import: 'vor dem Import', wiederherstellen: 'vor dem Wiederherstellen', loeschen: 'vor dem Löschen' };
+const ANLASS = { export: 'beim Export', import: 'vor dem Import', wiederherstellen: 'vor dem Wiederherstellen', loeschen: 'vor dem Löschen', abgleich: 'vor dem Abgleich' };
 const TAG_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 const TAG_LANG = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 
@@ -422,21 +424,31 @@ function kalenderKarte(d) {
 function githubBereich() {
   const fehler = el('div', { class: 'meldung rot', role: 'alert' });
   if (github.verbunden()) {
+    const i = abgleich.info();
+    const zustandText = i.konflikt ? 'Angehalten: bitte unten entscheiden.'
+      : i.laeuft ? 'Gleicht gerade ab …'
+      : i.fehler ? i.fehler
+      : i.zuletzt ? `Zuletzt abgeglichen ${kalender.vorText(i.zuletzt)}.` : 'Noch nicht abgeglichen.';
     return el('div', {}, [
       el('div', { class: 'zeile' }, [
         el('div', { class: 'fuellung' }, [
           el('div', { class: 'zeile-titel' }, 'Abgleich über GitHub'),
           el('div', { class: 'zeile-hinweis' }, `Verbunden mit ${github.repo()} (privat). Der Token liegt nur auf diesem Gerät.`),
+          el('div', { class: `zeile-hinweis${i.fehler || i.konflikt ? ' rot' : ''}`, role: 'status' }, zustandText),
         ]),
-        el('button', { type: 'button', class: 'pille', 'data-fokus': 'gh-trennen', onclick: async () => { await github.trennen(); zustand.neuZeichnen(); } }, 'Trennen'),
+        el('div', { class: 'knopfreihe eng' }, [
+          el('button', { type: 'button', class: 'pille', disabled: i.laeuft || !!i.konflikt, 'data-fokus': 'gh-abgleich', onclick: () => { abgleich.abgleichen(); kalender.abgleichen(); } }, 'Jetzt abgleichen'),
+          el('button', { type: 'button', class: 'pille leise', 'data-fokus': 'gh-trennen', onclick: async () => { await github.trennen(); await abgleich.vergessen(); zustand.neuZeichnen(); } }, 'Trennen'),
+        ]),
       ]),
+      i.konflikt ? konfliktBereich(i.konflikt) : null,
     ]);
   }
   const repo = el('input', { class: 'feld', type: 'text', value: github.repo(), autocomplete: 'off', spellcheck: 'false' });
   const token = el('input', { class: 'feld', type: 'password', autocomplete: 'off', placeholder: 'github_pat_…', spellcheck: 'false' });
   return el('div', { class: 'kachel klein formular mit-abstand' }, [
     el('div', { class: 'zeile-titel' }, 'Abgleich über GitHub'),
-    el('div', { class: 'zeile-hinweis' }, 'Für den Kalender und später für den Abgleich zwischen deinen Geräten. Nur ein privates Repo. Der Token braucht nur Lese- und Schreibrecht auf dieses eine Repo und bleibt auf diesem Gerät.'),
+    el('div', { class: 'zeile-hinweis' }, 'Für den Kalender und den Abgleich zwischen deinen Geräten. Nur ein privates Repo. Der Token braucht nur Lese- und Schreibrecht auf dieses eine Repo und bleibt auf diesem Gerät.'),
     feldGruppe('Privates Repo', repo),
     feldGruppe('Token', token),
     fehler,
@@ -444,9 +456,40 @@ function githubBereich() {
       type: 'button', class: 'pille haupt',
       onclick: async (ev) => {
         ev.currentTarget.disabled = true;
-        try { await github.verbinden(repo.value, token.value); token.value = ''; await kalender.abgleichen(); zustand.neuZeichnen(); } catch (f) { fehler.textContent = f.message; ev.currentTarget.disabled = false; }
+        const knopf = ev.currentTarget;
+        try { await github.verbinden(repo.value, token.value); token.value = ''; await abgleich.vergessen(); zustand.neuZeichnen(); abgleich.abgleichen(); kalender.abgleichen(); } catch (f) { fehler.textContent = f.message; knopf.disabled = false; }
       },
     }, 'Verbinden')]),
+  ]);
+}
+
+// Konflikt: je Eintrag wählen, welcher Stand gilt
+let wahl = {};
+function konfliktBereich(k) {
+  const liste = k.ergebnis.konflikte;
+  const alle = (seite) => { wahl = Object.fromEntries(liste.map((x) => [x.schluessel, seite])); zustand.neuZeichnen(); };
+  return el('div', { class: 'kachel klein formular mit-abstand', role: 'region', 'aria-labelledby': 'h-konflikt' }, [
+    el('div', { class: 'knopfreihe' }, [el('span', { class: 'chip gelb' }, 'Konflikt'), el('span', { class: 'zeile-titel', id: 'h-konflikt' }, `${liste.length} ${liste.length === 1 ? 'Eintrag wurde' : 'Einträge wurden'} auf zwei Geräten verschieden geändert`)]),
+    el('div', { class: 'zeile-hinweis' }, 'Wähle je Eintrag, welcher Stand gilt. Alles andere ist schon zusammengeführt. Vorher wird eine Sicherung angelegt.'),
+    ...liste.map((x) => {
+      const seite = wahl[x.schluessel] ?? 'lokal';
+      return el('div', { class: 'konflikt' }, [
+        el('div', { class: 'zeile-titel' }, `${x.name} · ${x.titel}`),
+        el('div', { class: 'konflikt-tabelle' }, [
+          el('span', { class: 'feld-label' }, ''), el('span', { class: 'feld-label' }, 'Dieses Gerät'), el('span', { class: 'feld-label' }, 'Anderes Gerät'),
+          ...unterschiede(x).slice(0, 5).flatMap((u) => [el('span', { class: 'zeile-hinweis' }, u.feld), el('span', { class: 'zeile-text zahl' }, u.lokal), el('span', { class: 'zeile-text zahl' }, u.entfernt)]),
+        ]),
+        el('div', { class: 'wahlreihe', role: 'group', 'aria-label': `${x.name} ${x.titel}: welcher Stand gilt` }, [
+          wahlPille('Dieses Gerät', seite === 'lokal', () => { wahl[x.schluessel] = 'lokal'; zustand.neuZeichnen(); }, { art: 'breit', fokus: `k-l-${x.schluessel}` }),
+          wahlPille('Anderes Gerät', seite === 'entfernt', () => { wahl[x.schluessel] = 'entfernt'; zustand.neuZeichnen(); }, { art: 'breit', fokus: `k-r-${x.schluessel}` }),
+        ]),
+      ]);
+    }),
+    el('div', { class: 'knopfreihe' }, [
+      el('button', { type: 'button', class: 'pille haupt', 'data-fokus': 'k-uebernehmen', onclick: async () => { const w = wahl; wahl = {}; await abgleich.loesen(w); } }, 'Übernehmen'),
+      el('button', { type: 'button', class: 'pille leise', onclick: () => alle('lokal') }, 'Alle von diesem Gerät'),
+      el('button', { type: 'button', class: 'pille leise', onclick: () => alle('entfernt') }, 'Alle vom anderen Gerät'),
+    ]),
   ]);
 }
 
@@ -519,7 +562,9 @@ function datenKarte() {
 
   return el('section', { class: 'karte', 'aria-labelledby': 'h-daten' }, [
     el('h2', { id: 'h-daten' }, 'Daten'),
-    el('p', { class: 'zeile-hinweis mit-abstand' }, 'Deine Daten liegen nur in diesem Browser. Exportiere regelmäßig, dann hast du eine Sicherung als Datei.'),
+    el('p', { class: 'zeile-hinweis mit-abstand' }, github.verbunden() && !beispiel
+      ? 'Deine Daten liegen in diesem Browser und werden über dein privates Repo mit deinen anderen Geräten abgeglichen.'
+      : 'Deine Daten liegen nur in diesem Browser. Exportiere regelmäßig, dann hast du eine Sicherung als Datei.'),
     el('div', { class: 'mit-abstand' }, [
       el('div', { class: 'zeile' }, [
         el('div', { class: 'fuellung' }, [

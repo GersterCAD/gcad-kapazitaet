@@ -414,6 +414,11 @@ a.kopf-status:hover { color: var(--text); }
   .kalendertag-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 }
 
+/* Abgleich: Konflikte */
+.konflikt { padding: 16px 0; border-top: 1px solid var(--linie); display: flex; flex-direction: column; gap: 8px; }
+.konflikt-tabelle { display: grid; grid-template-columns: minmax(80px, auto) 1fr 1fr; gap: 4px 16px; align-items: baseline; }
+.konflikt-tabelle .zeile-hinweis { margin: 0; }
+
 /* Handybreite: Abstände enger, Überschrift kleiner */
 @media (max-width: 640px) {
   .kopf, .bereiche { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }

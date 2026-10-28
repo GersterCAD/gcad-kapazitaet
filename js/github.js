@@ -49,3 +49,47 @@ export async function dateiHolen(pfad) {
   if (!antwort.ok) throw new Error(fehlerText(antwort.status));
   return antwort.text();
 }
+
+// UTF-8 sicher nach/aus Base64 (die GitHub-API liefert Dateien als Base64)
+function base64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function ausBase64(b64) {
+  const s = atob(b64.replace(/\s/g, ''));
+  return new TextDecoder().decode(Uint8Array.from(s, (c) => c.charCodeAt(0)));
+}
+
+/** Datei mit ihrer Version (sha) holen: { text, sha } oder null, wenn es sie nicht gibt */
+export async function dateiMitVersion(pfad) {
+  if (!verbunden()) throw new Error('Nicht mit GitHub verbunden.');
+  let antwort;
+  try { antwort = await fetch(`${API}/repos/${zugang.repo}/contents/${pfad}`, { headers: kopf(), cache: 'no-store' }); } catch { throw new Error('Keine Verbindung zu GitHub.'); }
+  if (antwort.status === 404) return null;
+  if (!antwort.ok) throw new Error(fehlerText(antwort.status));
+  const j = await antwort.json();
+  // Ab 1 MB liefert die API den Inhalt nicht mit – dann roh nachladen
+  const text = j.content ? ausBase64(j.content) : await dateiHolen(pfad);
+  return { text, sha: j.sha };
+}
+
+/**
+ * Datei schreiben. sha = Version, auf der die Änderung beruht (null für neu).
+ * Hat sich die Datei inzwischen geändert, antwortet GitHub mit 409 – dann { veraltet: true }.
+ */
+export async function dateiSchreiben(pfad, text, sha, nachricht) {
+  if (!verbunden()) throw new Error('Nicht mit GitHub verbunden.');
+  let antwort;
+  try {
+    antwort = await fetch(`${API}/repos/${zugang.repo}/contents/${pfad}`, {
+      method: 'PUT', headers: { ...kopf(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: nachricht, content: base64(text), ...(sha ? { sha } : {}) }),
+    });
+  } catch { throw new Error('Keine Verbindung zu GitHub.'); }
+  if (antwort.status === 409 || antwort.status === 422) return { veraltet: true };
+  if (!antwort.ok) throw new Error(fehlerText(antwort.status));
+  const j = await antwort.json();
+  return { sha: j.content.sha };
+}

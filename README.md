@@ -4,4 +4,6 @@ Kapazitätsplanung nach Stunden. Reines HTML, CSS und JavaScript, ohne Build-Sch
 
 Dieses Repo enthält nur den Programmcode. Die Daten liegen im Browser und in einem privaten Repo.
 
+App: https://gerstercad.github.io/gcad-kapazitaet/ · Einrichtung des privaten Daten-Repos: `daten-repo/README.md`
+
 Schrift: Inter (SIL Open Font License, siehe `schrift/OFL.txt`).

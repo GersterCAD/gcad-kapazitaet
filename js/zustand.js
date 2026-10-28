@@ -27,6 +27,11 @@ export const sichern = (anlass) => speicher.sicherungAnlegen(satz, daten, anlass
 export function abonnieren(f) { hoerer.add(f); return () => hoerer.delete(f); }
 const melden = () => hoerer.forEach((f) => f(daten));
 
+// Wer wissen will, wann sich die Daten wirklich geändert haben (z. B. der Abgleich)
+const aenderungsHoerer = new Set();
+export function beiAenderung(f) { aenderungsHoerer.add(f); return () => aenderungsHoerer.delete(f); }
+const geaendert = (anlass) => aenderungsHoerer.forEach((f) => f(anlass));
+
 /** Ansicht neu zeichnen, ohne Daten zu ändern (z. B. Formular auf- oder zuklappen) */
 export const neuZeichnen = () => melden();
 
@@ -56,6 +61,7 @@ export async function beispielSchalten(an) {
   await speicher.metaSpeichern('aktiverSatz', satz);
   await laden(satz);
   melden();
+  geaendert('umschalten');
 }
 
 /** Beispieldaten auf den Anfangsstand zurücksetzen */
@@ -71,6 +77,7 @@ export async function aendern(fn) {
   daten = neu;
   await speicher.satzSpeichern(satz, daten);
   melden();
+  geaendert('aendern');
 }
 
 /** Daten komplett ersetzen (Import, Wiederherstellen). Vorher wird der alte Stand gesichert. */
@@ -79,4 +86,5 @@ export async function ersetzen(neu, anlass) {
   daten = neu;
   await speicher.satzSpeichern(satz, daten);
   melden();
+  geaendert(anlass);
 }

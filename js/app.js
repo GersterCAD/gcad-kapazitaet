@@ -13,6 +13,7 @@ import { projektformular, formularKontext, formularVergessen } from './ansichten
 import * as zustand from './zustand.js';
 import * as kalender from './kalender.js';
 import * as github from './github.js';
+import * as abgleich from './abgleich.js';
 
 const BEREICHE = [
   { id: 'uebersicht', name: 'Übersicht' },
@@ -126,7 +127,14 @@ function zeigen() {
   document.title = `${titel} · Kapazität`;
 
   const app = document.getElementById('app');
-  const inhalt = el('main', { class: `inhalt${ansicht.schmal ? ' schmal' : ''}${ansicht.voll ? ' voll' : ''}`, id: 'inhalt', tabindex: '-1' }, ansicht.inhalt);
+  const k = abgleich.info();
+  const band = k.aktiv && k.konflikt && pfad !== 'einstellungen'
+    ? el('div', { class: 'hinweisband', role: 'status' }, [
+        el('span', { class: 'chip gelb' }, 'Abgleich'),
+        el('div', { class: 'hinweisband-text' }, ['Auf einem anderen Gerät wurde dasselbe geändert. ', el('a', { href: '#/einstellungen' }, 'Bitte entscheiden, welcher Stand gilt.')]),
+      ])
+    : null;
+  const inhalt = el('main', { class: `inhalt${ansicht.schmal ? ' schmal' : ''}${ansicht.voll ? ' voll' : ''}`, id: 'inhalt', tabindex: '-1' }, [band, ansicht.inhalt]);
   app.replaceChildren(kopfzeile(ansicht), navigation(ansicht.bereich), inhalt);
   // Nach dem Neuzeichnen den Fokus zurück auf denselben Knopf (wichtig für Tastatur und Vorlesen)
   if (fokus) app.querySelector(`[data-fokus="${CSS.escape(fokus)}"]`)?.focus({ preventScroll: true });
@@ -141,8 +149,9 @@ window.addEventListener('hashchange', () => {
 });
 zustand.abonnieren(zeigen);
 kalender.abonnieren(zeigen);
-Promise.all([zustand.starten(), github.starten(), kalender.starten()])
-  .then(() => kalender.automatisch())
+abgleich.abonnieren(zeigen);
+Promise.all([zustand.starten(), github.starten(), kalender.starten(), abgleich.starten()])
+  .then(() => { kalender.automatisch(); abgleich.automatisch(); })
   .catch((f) => console.error('Daten konnten nicht geladen werden:', f))
   .finally(zeigen);
 

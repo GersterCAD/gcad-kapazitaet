@@ -73,6 +73,13 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026.
 - `js/github.js`: Zugang (Repo + Fine-grained-Token) nur lokal in `meta.github`, lehnt öffentliche Repos ab. `js/kalender.js`: holt `kalender.json` beim Start, alle 15 Minuten und beim Zurückkehren, speichert sie lokal (`meta.kalender`), nicht in den Kapazitätsdaten. Zum Ausprobieren auch als Datei ladbar.
 - Kostenloser GitHub-Plan: 2.000 Action-Minuten im Monat für private Repos – deshalb läuft die Action nur Mo–Sa 6–21 Uhr.
 
+## Abgleich zwischen Geräten (Schritt 8)
+
+- Datei `kapazitaet-daten.json` im privaten Repo, nur der echte Datensatz (nie Beispieldaten). `js/abgleich.js` gleicht ab: beim Start, 2 s nach jeder Änderung, alle 5 Minuten, beim Zurückkehren in die App und wenn das Netz wieder da ist.
+- `js/kern/abgleich.js`: Drei-Wege-Zusammenführung mit dem Stand des letzten Abgleichs (`meta.abgleich`: Daten + sha). Einträge je ID, Einstellungen je Feld. Nur auf einer Seite geändert → übernehmen. Auf beiden verschieden geändert (oder hier gelöscht, dort geändert) → **Konflikt**: der Abgleich hält an (`meta.abgleichKonflikt`), die App zeigt ein Hinweisband und in Einstellungen → Daten je Eintrag „Dieses Gerät“ / „Anderes Gerät“. Vor jedem Übernehmen wird gesichert.
+- Schreiben über die GitHub-API mit sha: Hat ein anderes Gerät inzwischen geschrieben (409), wird neu geholt und zusammengeführt.
+- Repos: `GersterCAD/gcad-kapazitaet` (öffentlich, GitHub Pages https://gerstercad.github.io/gcad-kapazitaet/) und `GersterCAD/gcad-kapazitaet-daten` (privat, Daten + Kalender-Action). Commits mit der Noreply-Adresse `345525017+GersterCAD@users.noreply.github.com`.
+
 - PWA: `manifest.json`, `sw.js` (Netz zuerst, ohne Netz aus dem Cache). **Bei jeder neuen oder geänderten Datei `VERSION` in `sw.js` hochzählen und die Datei in `HUELLE` eintragen.**
 - Schrift: Inter als woff2 in `schrift/` (OFL), nicht von Google laden. Bildzeichen in `bilder/`.
 - Lokal starten: `python3 -m http.server 8130` im Repo, dann http://localhost:8130.
