@@ -2,7 +2,7 @@
 // Die Logik steckt in js/kern/timer.js, der Timer selbst in den Daten (daten.timer).
 
 import * as zustand from './zustand.js';
-import { timerStarten, timerStoppen, laufzeit, dauerText } from './kern/timer.js';
+import { timerStarten, timerStoppen, timerVerwerfen, zuletztBenutzt, laufzeit, dauerText, dauerKurz, dauerLang } from './kern/timer.js';
 
 let letzte = null; // { eintraege, timer } – für „Rückgängig“ nach dem Stoppen
 
@@ -41,6 +41,24 @@ export async function rueckgaengig() {
   });
 }
 
+/** Vergessenen Timer verwerfen, ohne zu buchen */
+export async function verwerfen() {
+  letzte = null;
+  await zustand.aendern((d) => { timerVerwerfen(d); });
+}
+
+/** Zuletzt benutzte aktive Projekte (Schnellstart) */
+export const zuletzt = () => zuletztBenutzt(zustand.aktuell(), { heute: zustand.heute() });
+
+/** Schnellstart aus Liste oder Übersicht: mit der zuletzt benutzten Position, sonst der ersten */
+export async function schnellstart(projektId) {
+  const d = zustand.aktuell();
+  const p = d.projekte.find((x) => x.id === projektId);
+  const z = zuletzt().find((x) => x.projektId === projektId);
+  const nr = z?.positionNr && p?.positionen.some((x) => x.nr === z.positionNr) ? z.positionNr : p?.positionen[0]?.nr ?? null;
+  await starten(projektId, nr);
+}
+
 export async function notizSetzen(notiz) {
   await zustand.aendern((d) => { if (d.timer) d.timer.notiz = notiz; });
 }
@@ -50,7 +68,8 @@ export function ticken() {
   setInterval(() => {
     const t = laeuft();
     if (!t) return;
-    const text = dauerText(laufzeit(t));
-    document.querySelectorAll('[data-timer-lauf]').forEach((e) => { e.textContent = text; });
+    const ms = laufzeit(t);
+    const format = { kurz: dauerKurz, lang: dauerLang };
+    document.querySelectorAll('[data-timer-lauf]').forEach((e) => { e.textContent = (format[e.dataset.timerLauf] ?? dauerText)(ms); });
   }, 1000);
 }

@@ -7,6 +7,8 @@ import { STATUS_FEST, soll, ist } from '../kern/daten.js';
 import { plane } from '../kern/planung.js';
 import { ausText, tagKurz } from '../kern/datum.js';
 import { statusChip, planChip } from './projekt.js';
+import { startKnopf } from './zeitstopper.js';
+import * as stoppuhr from '../stoppuhr.js';
 
 const FILTER = [
   { id: 'aktiv', name: 'Aktiv', status: ['auftrag', 'laeuft', 'pausiert'] },
@@ -39,12 +41,21 @@ export function projektliste() {
         onclick: () => { filter = x.id; zustand.neuZeichnen(); },
       }, [x.name, el('span', { class: 'sekundaer zahl' }, ` ${anzahl(x)}`)]))),
     el('section', { class: 'karte', 'aria-label': 'Projektliste' }, projekte.length
-      ? projekte.map((p, i) => projektZeile(d, plan, p, i === projekte.length - 1))
+      ? projekte.map((p, i) => projektZeile(d, plan, p, i === projekte.length - 1, stoppuhr.zuletzt()[0]?.projektId))
       : [el('p', { class: 'zeile-hinweis' }, filter === 'aktiv' ? 'Keine laufenden Projekte. Leg eins an oder schau bei den Anfragen.' : 'Hier ist nichts.')]),
   ]);
 }
 
-function projektZeile(d, plan, p, letzte) {
+// Aktive Aufträge bekommen den Startknopf für den Schnellstart (Timer.dc.html)
+const MIT_START = ['auftrag', 'laeuft'];
+
+function projektZeile(d, plan, p, letzte, zuletztId) {
+  const zeile = projektLink(d, plan, p, letzte);
+  if (!MIT_START.includes(p.status)) return zeile;
+  return el('div', { class: `zeile-mit-start${letzte ? ' ohne-linie' : ''}` }, [zeile, startKnopf(p, { hervor: p.id === zuletztId })]);
+}
+
+function projektLink(d, plan, p, letzte) {
   const sollH = soll(p);
   const istH = ist(d, p.id);
   const info = STATUS_FEST.includes(p.status) ? plan.projekte[p.id] : null;

@@ -56,3 +56,51 @@ test('Abgleich: Timer auf einem Gerät gestartet kommt auf dem anderen an', () =
   assert.equal(konflikte.length, 0);
   assert.equal(daten.timer.projektId, 'p');
 });
+
+test('Anzeige kurz und lang, vergessen ab 10 h, verwerfen', async () => {
+  const { dauerKurz, dauerLang, vergessen, timerVerwerfen } = await import('../js/kern/timer.js');
+  assert.equal(dauerKurz(5050000), '01:24');
+  assert.equal(dauerLang(5050000), '01:24:10');
+  assert.equal(dauerKurz(94080000), '26:08');
+  const d = d0();
+  timerStarten(d, { projektId: 'p', positionNr: '1' }, um('2026-10-27T08:52:00'));
+  assert.equal(vergessen(d.timer, um('2026-10-27T18:00:00')), false);
+  assert.equal(vergessen(d.timer, um('2026-10-27T19:00:00')), true);
+  timerVerwerfen(d);
+  assert.equal(d.timer, null);
+  assert.equal(d.zeiteintraege.length, 0);
+});
+
+test('Vorschlag für das Ende eines vergessenen Timers', async () => {
+  const { endeVorschlag, stundenBis } = await import('../js/kern/timer.js');
+  const d = d0();
+  timerStarten(d, { projektId: 'p', positionNr: '1' }, um('2026-10-27T08:52:00'));
+  const jetzt = um('2026-10-28T11:00:00');
+  // ohne Termine: Start + Regeltag (8 h) = 16:52, aufgerundet 17:00
+  let v = endeVorschlag(d, [], jetzt);
+  assert.equal(v.grund, 'regeltag');
+  assert.equal(v.ende.getHours(), 17);
+  assert.equal(stundenBis(d, v.ende), 8.25);   // 08:52–17:00 = 8:08 → 8,25 h
+  assert.ok(d.timer, 'Vorschau ändert nichts');
+  // letzter Termin des Tages endete 16:30 → 17:00
+  const t = (s, e) => ({ start: um(s).toISOString(), ende: um(e).toISOString(), ganztaegig: false });
+  v = endeVorschlag(d, [t('2026-10-27T14:00:00', '2026-10-27T16:30:00'), t('2026-10-28T09:00:00', '2026-10-28T10:00:00')], jetzt);
+  assert.equal(v.grund, 'termin');
+  assert.equal(v.terminEnde.getMinutes(), 30);
+  assert.equal(v.ende.getHours(), 17);
+});
+
+test('Zuletzt benutzt für den Schnellstart', async () => {
+  const { zuletztBenutzt } = await import('../js/kern/timer.js');
+  const d = d0();
+  d.projekte.push({ id: 'q', name: 'Zwei', status: 'auftrag', schaetzungH: 5, puffer: 0, prioritaet: 2, positionen: [] });
+  d.projekte.push({ id: 'z', name: 'Zu', status: 'abgeschlossen', schaetzungH: 5, puffer: 0, prioritaet: 2, positionen: [] });
+  d.zeiteintraege.push(
+    { id: 'a', datum: '2026-10-27', projektId: 'q', positionNr: null, stunden: 2, notiz: '' },
+    { id: 'b', datum: '2026-10-28', projektId: 'p', positionNr: '1', stunden: 1, notiz: '', von: '08:00', bis: '09:00' },
+    { id: 'c', datum: '2026-10-28', projektId: 'p', positionNr: '2', stunden: 0.5, notiz: '', von: '10:00', bis: '10:30' },
+    { id: 'd', datum: '2026-10-29', projektId: 'z', positionNr: null, stunden: 1, notiz: '' },
+  );
+  const z = zuletztBenutzt(d, { heute: '2026-10-28' });
+  assert.deepEqual(z.map((x) => [x.projektId, x.positionNr, x.stundenHeute]), [['p', '2', 1.5], ['q', null, 0]]);
+});

@@ -63,3 +63,64 @@ export function timerStoppen(daten, jetzt = new Date(), { ende } = {}) {
   daten.zeiteintraege.push(...neu);
   return neu;
 }
+
+/** Kurz für die Kopfzeile: „01:24“ (Stunden:Minuten), lang auf der Projektseite: „01:24:10“ */
+export function dauerKurz(ms) {
+  const m = Math.floor(ms / 60000);
+  return `${zwei(Math.floor(m / 60))}:${zwei(m % 60)}`;
+}
+export const dauerLang = (ms) => `${zwei(Math.floor(ms / 3600000))}:${dauerText(ms).slice(-5)}`;
+
+/** Ab wann ein Timer als vergessen gilt */
+export const VERGESSEN_AB_MS = 10 * 3600 * 1000;
+export const vergessen = (timer, jetzt = new Date()) => laufzeit(timer, jetzt) > VERGESSEN_AB_MS;
+
+/** Timer verwerfen, ohne zu buchen (ändert daten) */
+export function timerVerwerfen(daten) {
+  const t = daten.timer;
+  daten.timer = null;
+  return t;
+}
+
+/**
+ * Vorschlag für das Ende eines vergessenen Timers: Ende des letzten Termins am Starttag, sonst Start + Regeltag.
+ * Aufgerundet auf die volle Stunde, nie nach jetzt. termine: [{ start, ende, ganztaegig }] (ISO).
+ * Ergebnis: { ende: Date, grund: 'termin' | 'regeltag', terminEnde: Date | null }
+ */
+export function endeVorschlag(daten, termine = [], jetzt = new Date()) {
+  const start = new Date(daten.timer.start);
+  const tagEnde = plusTage(ausText(alsText(start)), 1);
+  const letzter = termine
+    .filter((t) => !t.ganztaegig)
+    .map((t) => new Date(t.ende))
+    .filter((e) => e > start && e <= tagEnde)
+    .sort((a, b) => b - a)[0] ?? null;
+  const roh = letzter ?? new Date(start.getTime() + (daten.einstellungen.regeltagH ?? 8) * 3600000);
+  const ende = new Date(roh);
+  if (ende.getMinutes() || ende.getSeconds()) ende.setHours(ende.getHours() + 1, 0, 0, 0);
+  const grenze = new Date(Math.min(jetzt, tagEnde));
+  return { ende: ende > grenze ? grenze : ende, grund: letzter ? 'termin' : 'regeltag', terminEnde: letzter };
+}
+
+/** Gebuchte Stunden für ein Ende (gerundet wie beim Stoppen), ohne daten zu ändern */
+export function stundenBis(daten, ende) {
+  const probe = { timer: { ...daten.timer }, einstellungen: daten.einstellungen, zeiteintraege: [] };
+  return timerStoppen(probe, ende, { ende }).reduce((a, z) => a + z.stunden, 0);
+}
+
+/**
+ * Zuletzt benutzte Projekte für den Schnellstart, neueste zuerst: [{ projektId, positionNr, datum, stundenHeute }].
+ * Nur Projekte mit Status aus statusErlaubt. heute: 'YYYY-MM-DD'.
+ */
+export function zuletztBenutzt(daten, { heute, statusErlaubt = ['auftrag', 'laeuft'] } = {}) {
+  const erlaubt = new Set(daten.projekte.filter((p) => statusErlaubt.includes(p.status)).map((p) => p.id));
+  const sortiert = daten.zeiteintraege
+    .filter((z) => erlaubt.has(z.projektId))
+    .sort((a, b) => b.datum.localeCompare(a.datum) || (b.bis ?? '').localeCompare(a.bis ?? ''));
+  const ergebnis = new Map();
+  for (const z of sortiert) {
+    if (!ergebnis.has(z.projektId)) ergebnis.set(z.projektId, { projektId: z.projektId, positionNr: z.positionNr ?? null, datum: z.datum, stundenHeute: 0 });
+  }
+  for (const z of sortiert) if (z.datum === heute && ergebnis.has(z.projektId)) ergebnis.get(z.projektId).stundenHeute += z.stunden;
+  return [...ergebnis.values()];
+}

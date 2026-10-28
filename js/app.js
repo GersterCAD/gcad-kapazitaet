@@ -15,15 +15,17 @@ import * as kalender from './kalender.js';
 import * as github from './github.js';
 import * as abgleich from './abgleich.js';
 import * as stoppuhr from './stoppuhr.js';
-import { laufzeit, dauerText } from './kern/timer.js';
+import { kopfTimer, mobilTimer } from './ansichten/zeitstopper.js';
 
+// Fünf Bereiche nach Entwurf Index B (Navigation.dc.html), Einstellungen als Zahnrad in der Kopfzeile.
+// Abrechnung kommt dazu, sobald sie gebaut ist. Angebote enthält bis dahin „Anfrage prüfen“.
 const BEREICHE = [
-  { id: 'uebersicht', name: 'Übersicht' },
-  { id: 'projekte', name: 'Projekte' },
-  { id: 'anfragen', name: 'Anfragen' },
-  { id: 'kalender', name: 'Kalender' },
-  { id: 'einstellungen', name: 'Einstellungen' },
+  { id: 'uebersicht', name: 'Übersicht', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
+  { id: 'projekte', name: 'Projekte', icon: 'M3 7h18v13H3zM8 7V4h8v3' },
+  { id: 'angebote', name: 'Angebote', href: '#/anfragen', icon: 'M14 3H6v18h12V7zM14 3v4h4M9 12h6M9 16h6' },
+  { id: 'kalender', name: 'Kalender', icon: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4' },
 ];
+const ZAHNRAD = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>';
 
 // Je Ansicht: Kopfzeilen-Kontext, Statustext rechts, ob die Aktionen sichtbar sind, Inhalt.
 const ANSICHTEN = {
@@ -44,11 +46,12 @@ const ANSICHTEN = {
   }),
   'projekte/neu': () => ({
     bereich: 'projekte',
+    titel: 'Neues Projekt', zurueck: '#/projekte',
     kontext: formularKontext(null),
     status: 'Nicht gespeichert',
     inhalt: projektformular(null),
   }),
-  anfragen: () => ({ bereich: 'anfragen', ...anfrageKopf(null), voll: true, inhalt: anfrageSeite(null) }),
+  anfragen: () => ({ bereich: 'angebote', titel: 'Anfrage prüfen', ...anfrageKopf(null), voll: true, inhalt: anfrageSeite(null) }),
   kalender: () => ({
     bereich: 'kalender',
     kontext: 'Kalender',
@@ -57,6 +60,7 @@ const ANSICHTEN = {
   }),
   einstellungen: () => ({
     bereich: 'einstellungen',
+    titel: 'Einstellungen',
     kontext: 'Einstellungen',
     status: 'Änderungen gelten sofort für die Planung',
     schmal: true,
@@ -75,32 +79,20 @@ function kalenderStatus() {
     farbe = frisch ? 'gruen' : 'gelb';
     text = `Kalender ${i.quelle === 'datei' ? 'aus Datei' : 'abgeglichen'} · ${kalender.vorText(i.abgeglichen)}`;
   }
-  return el('a', { class: 'kopf-status', href: '#/kalender', title: i.fehler || null }, [
+  // Kurz wie im Entwurf („Kalender · Lexware“, ein Punkt für alle Verbindungen), Einzelheiten als Hinweis
+  return el('a', { class: 'kopf-status verbindungen', href: '#/kalender', title: i.fehler ? `${text}: ${i.fehler}` : text, 'aria-label': text }, [
     el('span', { class: `punkt ${farbe}`.trim(), 'aria-hidden': 'true' }),
-    text,
-  ]);
-}
-
-// Laufender Timer: in jeder Ansicht oben sichtbar, mit Stopp
-function timerAnzeige() {
-  const t = stoppuhr.laeuft();
-  if (!t) return null;
-  const p = zustand.aktuell().projekte.find((x) => x.id === t.projektId);
-  return el('div', { class: 'kopf-timer' }, [
-    el('a', { href: `#/projekte/${t.projektId}`, class: 'kopf-timer-link', title: 'Zum Projekt' }, [
-      el('span', { class: 'punkt laeuft', 'aria-hidden': 'true' }),
-      el('span', { class: 'zahl fett-mittel', 'data-timer-lauf': '' }, dauerText(laufzeit(t))),
-      el('span', { class: 'kopf-timer-name' }, `${p?.name ?? 'Projekt'}${t.positionNr ? ` · Pos. ${t.positionNr}` : ''}`),
-    ]),
-    el('button', {
-      type: 'button', class: 'pille', 'data-fokus': 'kopf-timer-stopp', 'aria-label': 'Timer stoppen und Zeit buchen',
-      onclick: async () => { await stoppuhr.stoppen(); location.hash = `#/projekte/${t.projektId}`; },
-    }, 'Stoppen'),
+    el('span', { class: 'verbindungen-text' }, 'Kalender'),
   ]);
 }
 
 function kopfzeile(a) {
   return el('header', { class: 'kopf' }, [
+    // Am iPhone steht statt der Marke der Seitentitel (iPhone.dc.html)
+    el('div', { class: 'kopf-titel-mobil' }, [
+      a.zurueck ? el('a', { class: 'kopf-zurueck', href: a.zurueck, 'aria-label': 'Zurück' }, '‹') : null,
+      el('span', {}, a.titel ?? BEREICHE.find((b) => b.id === a.bereich)?.name ?? 'Kapazität'),
+    ]),
     el('a', { class: 'kopf-marke', href: '#/uebersicht' }, [
       el('span', { class: 'kopf-name' }, 'Kapazität'),
       el('span', { class: 'kopf-zusatz' }, 'von Gerster CAD'),
@@ -109,9 +101,13 @@ function kopfzeile(a) {
     el('div', { class: 'kopf-kontext' }, a.kontext),
     zustand.istBeispiel() ? el('a', { class: 'chip', href: '#/einstellungen', title: 'Beispieldaten in den Einstellungen abschalten' }, 'Beispieldaten') : null,
     el('div', { class: 'fuellung' }),
-    timerAnzeige(),
-    a.kalenderStatus ? kalenderStatus() : null,
-    a.status ? el('span', { class: 'kopf-status' }, a.status) : null,
+    a.status ? el('span', { class: 'kopf-status kopf-speicher' }, a.status) : null,
+    el('div', { class: 'kopf-timer-platz' }, kopfTimer()),
+    kalenderStatus(),
+    el('a', {
+      class: 'kopf-zahnrad', href: '#/einstellungen', 'aria-label': 'Einstellungen', title: 'Einstellungen',
+      'aria-current': a.bereich === 'einstellungen' ? 'page' : null, html: ZAHNRAD,
+    }),
     a.aktionen
       ? el('div', { class: 'kopf-aktionen' }, [
           el('a', { class: 'pille', href: '#/anfragen' }, 'Anfrage prüfen'),
@@ -121,21 +117,28 @@ function kopfzeile(a) {
   ]);
 }
 
+// Oben als Pillen, am iPhone als Tab-Leiste unten (mit Bildzeichen aus dem Entwurf)
 function navigation(aktiv) {
   return el('nav', { class: 'bereiche', 'aria-label': 'Bereiche' },
-    BEREICHE.map((b) => el('a', { href: `#/${b.id}`, 'aria-current': b.id === aktiv ? 'page' : null }, b.name)));
+    BEREICHE.map((b) => el('a', { href: b.href ?? `#/${b.id}`, 'aria-current': b.id === aktiv ? 'page' : null }, [
+      el('span', {
+        class: 'bereich-icon', 'aria-hidden': 'true',
+        html: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${b.icon}"/></svg>`,
+      }),
+      el('span', { class: 'bereich-name' }, b.name),
+    ])));
 }
 
 // Adressen mit Projekt-ID: #/projekte/<id> und #/projekte/<id>/bearbeiten
 function ansichtFuer(pfad) {
   if (ANSICHTEN[pfad]) return ANSICHTEN[pfad]();
   const a = pfad.match(/^anfragen\/([^/]+)$/);
-  if (a) return { bereich: 'anfragen', ...anfrageKopf(a[1]), voll: true, inhalt: anfrageSeite(a[1]) };
+  if (a) return { bereich: 'angebote', titel: 'Anfrage', zurueck: '#/projekte', ...anfrageKopf(a[1]), voll: true, inhalt: anfrageSeite(a[1]) };
   const m = pfad.match(/^projekte\/([^/]+)(\/bearbeiten)?$/);
   if (m) {
     const p = zustand.aktuell().projekte.find((x) => x.id === m[1]);
-    if (m[2]) return { bereich: 'projekte', kontext: formularKontext(m[1]), status: 'Nicht gespeichert', inhalt: projektformular(m[1]) };
-    return { bereich: 'projekte', kontext: p ? projektKontext(p) : 'Projekt', status: p ? 'Gespeichert' : null, inhalt: projektseite(m[1]) };
+    if (m[2]) return { bereich: 'projekte', titel: 'Projekt bearbeiten', zurueck: `#/projekte/${m[1]}`, kontext: formularKontext(m[1]), status: 'Nicht gespeichert', inhalt: projektformular(m[1]) };
+    return { bereich: 'projekte', titel: p?.name ?? 'Projekt', zurueck: '#/projekte', kontext: p ? projektKontext(p) : 'Projekt', status: p ? 'Gespeichert' : null, inhalt: projektseite(m[1]) };
   }
   return ANSICHTEN.uebersicht();
 }
@@ -144,7 +147,7 @@ function zeigen() {
   const pfad = location.hash.replace(/^#\/?/, '') || 'uebersicht';
   const fokus = document.activeElement?.dataset?.fokus;
   const ansicht = ansichtFuer(pfad);
-  const titel = BEREICHE.find((b) => b.id === ansicht.bereich)?.name;
+  const titel = ansicht.titel ?? BEREICHE.find((b) => b.id === ansicht.bereich)?.name;
   document.title = `${titel} · Kapazität`;
 
   const app = document.getElementById('app');
@@ -156,7 +159,8 @@ function zeigen() {
       ])
     : null;
   const inhalt = el('main', { class: `inhalt${ansicht.schmal ? ' schmal' : ''}${ansicht.voll ? ' voll' : ''}`, id: 'inhalt', tabindex: '-1' }, [band, ansicht.inhalt]);
-  app.replaceChildren(kopfzeile(ansicht), navigation(ansicht.bereich), inhalt);
+  app.replaceChildren(kopfzeile(ansicht), navigation(ansicht.bereich), inhalt, mobilTimer(pfad) ?? '');
+  app.classList.toggle('mit-mobil-timer', !!app.querySelector('.mobil-timer'));
   // Nach dem Neuzeichnen den Fokus zurück auf denselben Knopf (wichtig für Tastatur und Vorlesen)
   if (fokus) app.querySelector(`[data-fokus="${CSS.escape(fokus)}"]`)?.focus({ preventScroll: true });
 }

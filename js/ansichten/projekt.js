@@ -9,8 +9,7 @@ import { lernwerte, LERNWERT_AB } from '../kern/lernwert.js';
 import { ausText, alsText, plusTage, tagKurz, isoWoche } from '../kern/datum.js';
 import { loeschKnopf } from './einstellungen.js';
 import { meilensteineExportieren } from './kalender.js';
-import * as stoppuhr from '../stoppuhr.js';
-import { laufzeit, dauerText } from '../kern/timer.js';
+import { timerKarte } from './zeitstopper.js';
 import { rechnungsZeilen, ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN, abrechnungUeberblick, euro } from '../kern/abrechnung.js';
 
 const PLAN_CHIP = { imPlan: ['gruen', 'im Plan'], knapp: ['gelb', 'knapp'], zuSpaet: ['rot', 'zu spät'] };
@@ -84,7 +83,7 @@ export function projektseite(id) {
     ]),
     kennzahlen(d, p, plan, info),
     el('div', { class: 'zweispaltig' }, [
-      el('div', { class: 'spalte-haupt' }, [meilensteine(d, p, s), sollIst(d, p)]),
+      el('div', { class: 'spalte-haupt' }, [timerKarte(d, p, s), meilensteine(d, p, s), sollIst(d, p)]),
       el('aside', { class: 'spalte-seite' }, [zeitBuchen(d, p, s), abrechnungKarte(d, p), lernwertKarte(d, p)]),
     ]),
   ]);
@@ -323,17 +322,16 @@ function zeitBuchen(d, p, s) {
     .sort((a, b) => b.datum.localeCompare(a.datum) || (b.von ?? '').localeCompare(a.von ?? '')).slice(0, 4);
 
   return el('section', { class: 'kachel', 'aria-labelledby': 'h-zeit' }, [
-    el('h2', { id: 'h-zeit', class: 'label' }, 'Zeit buchen'),
+    el('h2', { id: 'h-zeit', class: 'label' }, 'Von Hand buchen'),
     el('div', { class: 'stapel gross' }, [
       p.positionen.length ? el('div', { class: 'feldgruppe' }, [
         el('span', { id: 'l-pos', class: 'feld-label' }, 'Position'),
         el('div', { class: 'wahlreihe', role: 'group', 'aria-labelledby': 'l-pos' }, p.positionen.map((x) =>
           wahlPille(x.nr, s.pos === x.nr, () => { s.pos = x.nr; zustand.neuZeichnen(); }, { label: `Pos. ${x.nr} ${x.bezeichnung}`, fokus: `pos-${x.nr}`, art: 'zahl' }))),
       ]) : null,
-      timerBlock(d, p, s),
       el('div', { class: 'feldgruppe trenner-oben' }, [
         el('div', { class: 'knopfreihe eng zwischen' }, [
-          el('span', { id: 'l-std', class: 'feld-label' }, `Oder von Hand · ${tagText}`),
+          el('span', { id: 'l-std', class: 'feld-label' }, `Stunden · ${tagText}`),
           el('button', {
             type: 'button', class: 'textknopf', 'aria-expanded': String(s.datumOffen), 'data-fokus': 'buchung-tag',
             onclick: () => { s.datumOffen = !s.datumOffen; zustand.neuZeichnen(); },
@@ -362,70 +360,6 @@ function zeitBuchen(d, p, s) {
         onclick: () => { if (s.letzteBuchung?.id === z.id) s.letzteBuchung = null; zustand.aendern((x) => { x.zeiteintraege = x.zeiteintraege.filter((y) => y.id !== z.id); }); },
       }, [kreuzIcon()]),
     ]))),
-  ]);
-}
-
-// ---------- Zeitstopper ----------
-
-function timerBlock(d, p, s) {
-  const t = d.timer;
-  const hier = t && t.projektId === p.id;
-  const pos = (nr) => p.positionen.find((x) => x.nr === nr);
-  const letzte = stoppuhr.letzteBuchung();
-
-  // Meldung nach dem Stoppen (mit Rückgängig)
-  let meldung = null;
-  if (letzte && letzte.eintraege.some((z) => z.projektId === p.id) || (letzte && !letzte.eintraege.length && letzte.timer?.projektId === p.id)) {
-    const e = letzte.eintraege;
-    meldung = el('div', { class: 'meldung', role: 'status' }, e.length
-      ? [`Gebucht: ${e.map((z) => `${zahlText(z.stunden, 2)} h (${z.von}–${z.bis})`).join(' + ')}${e[0].positionNr ? ` auf Pos. ${e[0].positionNr}` : ''}. `,
-          el('button', { type: 'button', class: 'textknopf', onclick: () => stoppuhr.rueckgaengig() }, 'Rückgängig')]
-      : ['Unter einer Minute, nichts gebucht. ', el('button', { type: 'button', class: 'textknopf', onclick: () => stoppuhr.rueckgaengig() }, 'Weiterlaufen lassen')]);
-  }
-
-  if (hier) {
-    const ms = laufzeit(t);
-    const vergessen = ms > 10 * 3600 * 1000;
-    const seit = new Date(t.start);
-    const zwei = (n) => String(n).padStart(2, '0');
-    const jetzt = new Date();
-    const lokal = (x) => `${x.getFullYear()}-${zwei(x.getMonth() + 1)}-${zwei(x.getDate())}T${zwei(x.getHours())}:${zwei(x.getMinutes())}`;
-    const ende = el('input', { class: 'feld', type: 'datetime-local', value: lokal(jetzt), min: lokal(seit), max: lokal(jetzt), 'aria-label': 'Ende' });
-    const notiz = el('input', {
-      class: 'feld', type: 'text', value: t.notiz ?? '', placeholder: 'Notiz, optional', 'aria-label': 'Notiz zum Timer', 'data-fokus': 'timer-notiz',
-      onchange: () => stoppuhr.notizSetzen(notiz.value),
-    });
-    return el('div', { class: 'timer laeuft', role: 'group', 'aria-label': 'Timer' }, [
-      el('div', { class: 'knopfreihe eng zwischen' }, [
-        el('span', { class: 'feld-label' }, ['Timer läuft', t.positionNr ? ` · Pos. ${t.positionNr}${pos(t.positionNr) ? ` ${pos(t.positionNr).bezeichnung}` : ''}` : '']),
-        el('span', { class: 'zeile-hinweis zahl' }, `seit ${tagKurz(seit)} ${zwei(seit.getHours())}:${zwei(seit.getMinutes())}`),
-      ]),
-      el('div', { class: 'timer-zeit zahl', 'data-timer-lauf': '', 'aria-live': 'off' }, dauerText(ms)),
-      notiz,
-      vergessen ? el('div', { class: 'feldgruppe' }, [
-        el('div', { class: 'zeile-hinweis rot' }, 'Läuft seit über 10 Stunden. Vergessen? Trag das richtige Ende ein.'),
-        ende,
-      ]) : null,
-      t.positionNr !== s.pos && s.pos ? el('div', { class: 'zeile-hinweis' }, ['Andere Position gewählt. ',
-        el('button', { type: 'button', class: 'textknopf', onclick: () => stoppuhr.starten(p.id, s.pos, notiz.value) }, `Auf Pos. ${s.pos} wechseln`)]) : null,
-      el('button', {
-        type: 'button', class: 'knopf-gross stopp', 'data-fokus': 'timer-stopp',
-        onclick: () => stoppuhr.stoppen(vergessen && ende.value ? new Date(ende.value) : undefined),
-      }, [el('span', { class: 'icon', 'aria-hidden': 'true', html: '<svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="2" fill="currentColor"/></svg>' }), 'Stoppen']),
-      meldung,
-    ]);
-  }
-
-  const anderes = t && d.projekte.find((x) => x.id === t.projektId);
-  return el('div', { class: 'timer', role: 'group', 'aria-label': 'Timer' }, [
-    anderes ? el('div', { class: 'zeile-hinweis' }, [
-      'Der Timer läuft gerade für ', el('a', { href: `#/projekte/${anderes.id}` }, anderes.name), ' (', el('span', { class: 'zahl', 'data-timer-lauf': '' }, dauerText(laufzeit(t))), '). Starten stoppt ihn und bucht die Zeit dort.',
-    ]) : null,
-    el('button', {
-      type: 'button', class: 'knopf-gross', 'data-fokus': 'timer-start',
-      onclick: () => stoppuhr.starten(p.id, s.pos),
-    }, [el('span', { class: 'icon', 'aria-hidden': 'true', html: '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 1.2v9.6L10.5 6z" fill="currentColor"/></svg>' }), s.pos ? `Timer starten · Pos. ${s.pos}` : 'Timer starten']),
-    meldung,
   ]);
 }
 

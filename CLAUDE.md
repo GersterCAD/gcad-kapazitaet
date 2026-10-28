@@ -2,7 +2,7 @@
 
 Web-App, mit der Joachim (Einzelunternehmer, CAD- und Innenausbauplanung) seine Aufträge nach Stunden plant: Auslastung der nächsten Wochen, passt eine Anfrage rein, wann ist sie realistisch fertig, Warnung bei zu vielen langen Wochen, Vorschläge zur Lösung.
 
-Design-Vorlage: Claude Design Index A vom 27.10.2026.
+Design-Vorlage: Claude Design Index A vom 27.10.2026, Folge-Entwurf Index B vom 28.10.2026 (`…/03_Design/26-10-28_Claude-Design_Index-B/Quelle_Design-Canvas/b/`, 18 Boards: Navigation, Timer, Projektseite, iPhone, Angebote, Angebot, Auftrag, Rechnung, Abrechnung, Nachkalkulation, Kunden, Projektliste, ProjektForm, Kalender, Einstellungen, Zustände, Datenmodell). Index B wird schrittweise umgesetzt, nach jedem Teil Joachims Freigabe.
 
 ## Quellen
 
@@ -27,6 +27,9 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026.
 - Reines HTML, CSS und JavaScript (ES-Module), kein Build-Schritt. Veröffentlicht über GitHub Pages, Repo `gcad-kapazitaet`.
 - `index.html` lädt `styles/ci.css` (CI-Farben, Schrift, Pillen, Chips, Karten), `styles/app.css` (Kopfzeile, Bereiche, Inhalt) und `js/app.js`.
 - `js/app.js`: Kopfzeile, Navigation, Bereiche über die Adresse (`#/uebersicht`, `#/projekte`, `#/anfragen`, `#/kalender`, `#/einstellungen`).
+  - Navigation nach Index B (`Navigation.dc.html`): Übersicht · Projekte · Angebote · (Abrechnung, sobald gebaut) · Kalender. Angebote führt bis zum Angebots-Schritt auf „Anfrage prüfen“. Einstellungen als Zahnrad in der Kopfzeile.
+  - Kopfzeile: Timer-Pille (läuft = dunkel mit Stopp, über 10 h = gelb „Timer prüfen“, sonst „… weiter“ mit dem zuletzt benutzten Projekt), ein Statuspunkt für die Verbindungen („Kalender“, später „· Lexware“), Zahnrad.
+  - Bis 640 px (iPhone.dc.html): Seitentitel mit „‹“ statt Marke, Bereiche als Tab-Leiste unten mit Bildzeichen, laufender Timer als dunkle Leiste darüber (nicht auf der Projektseite des laufenden Projekts).
 - `js/kern/`: Rechenkern **ohne Oberfläche** (kein DOM, kein `window`), damit er später in Werk.ai eingebunden werden kann. Tests in `tests/`.
 - `js/ansichten/`: je Bereich ein Modul. `js/ui.js`: kleine DOM-Hilfen (`el()`).
 - Daten: `js/kern/daten.js` (Struktur `schemaVersion: 1`, `leereDaten()`, `pruefeDaten()` für Laden/Import, berechnet `soll()`, `ist()`, `rest()`). Neue Version → `SCHEMA_VERSION` hochzählen und in `migriere()` umrechnen.
@@ -84,6 +87,9 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026.
 
 - `daten.timer = { projektId, positionNr, notiz, start }` – höchstens einer, liegt in den Daten und kommt per Abgleich auf alle Geräte (zwei verschiedene Timer = Konflikt).
 - `js/kern/timer.js`: Start (stoppt einen laufenden vorher), Stopp → Zeiteinträge mit `von`/`bis` und `quelle: 'timer'`, über Mitternacht je Tag getrennt, gerundet nach `einstellungen.timerRundung` (6, 15 oder 30 Min., Standard 15, mindestens eine Stufe, unter 1 Min. nichts). Anderes Ende für vergessene Timer (ab 10 h fragt die Projektseite).
+- Oberfläche nach Index B (`js/ansichten/zeitstopper.js`): Karte „Zeitstopper“ oben auf der Projektseite mit vier Zuständen (bereit mit Positions-Pillen, läuft dunkel mit „Position wechseln“, gestoppt mit „Gebucht: … (von–bis)“ + Rückgängig/Neu starten, vergessen über 10 h mit Uhrzeit-Pillen, Vorschlag und „Verwerfen“). Buchen von Hand steht daneben unter „Von Hand buchen“.
+  - `endeVorschlag()`: Ende des letzten Termins am Starttag, sonst Start + Regeltag, auf die volle Stunde aufgerundet. `stundenBis()` zeigt vorher, was gebucht würde.
+  - Schnellstart: runder Startknopf in Projektliste und Projektplan (aktive Aufträge), am iPhone „Weiterarbeiten“ auf der Übersicht. Startet mit der zuletzt benutzten Position (`zuletztBenutzt()`), der zuletzt benutzte Knopf ist gefüllt.
 - `js/stoppuhr.js`: Bedienung, „Rückgängig“ nach dem Stoppen (Buchung weg, Timer läuft weiter), Sekundenanzeige über `data-timer-lauf` ohne Neuzeichnen. Kopfzeile zeigt den laufenden Timer mit „Stoppen“ in jeder Ansicht.
 - Später Lexware Office (Public API, Tarif XL vorhanden): Rechnungsentwürfe aus Zeiteinträgen. `von`/`bis`/`notiz` sind dafür schon da.
 - `js/kern/abrechnung.js`: `rechnungsZeilen()` fasst offene Zeiteinträge (ohne `abgerechnet`) zusammen, nach `einstellungen.abrechnungZusammenfassen`: `tag` (Standard, Joachims Wunsch: je Tag und Projekt eine Zeile, damit viele kleine Einträge nicht kleinlich wirken), `tagPosition`, `einzeln`. Text: Datum · Positionen · Notizen. Einsteller in Einstellungen → Abrechnung, Vorschau „Offen zur Abrechnung“ auf der Projektseite. Nach der Übergabe bekommen die Einträge `abgerechnet` (Datum).

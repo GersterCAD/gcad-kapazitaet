@@ -11,6 +11,8 @@ import { termineNachTag } from '../kern/kapazitaet.js';
 import { ausText, alsText, plusTage, tagKurz, isoWoche, montag } from '../kern/datum.js';
 import { planChip } from './projekt.js';
 import { uhrzeit } from '../kalender.js';
+import { startKnopf, zuletztText } from './zeitstopper.js';
+import * as stoppuhr from '../stoppuhr.js';
 
 const ZEITRAUM = [
   { wochen: 4, name: '4 Wochen' },
@@ -64,6 +66,7 @@ export function uebersicht() {
         dieseWoche(d, opts),
       ]),
     ]),
+    weiterarbeiten(d),
     projektplan(d, plan, liste, fest, farbe, anfragen),
   ]);
 }
@@ -279,6 +282,28 @@ function dieseWoche(d, opts) {
   ]);
 }
 
+// ---------- Weiterarbeiten (nur am iPhone, iPhone.dc.html) ----------
+
+function weiterarbeiten(d) {
+  const t = stoppuhr.laeuft();
+  const zeilen = stoppuhr.zuletzt().filter((z) => z.projektId !== t?.projektId).slice(0, 2);
+  if (!zeilen.length) return null;
+  return el('section', { class: 'weiterarbeiten', 'aria-labelledby': 'h-weiter' }, [
+    el('h2', { id: 'h-weiter', class: 'label' }, 'Weiterarbeiten'),
+    ...zeilen.map((z, i) => {
+      const p = d.projekte.find((x) => x.id === z.projektId);
+      return el('div', { class: 'schnellstart' }, [
+        el('span', { class: 'farbstreifen', 'aria-hidden': 'true', style: p.farbe ? `background:${p.farbe}` : null }),
+        el('a', { class: 'fuellung schnellstart-text', href: `#/projekte/${p.id}` }, [
+          el('div', { class: 'zeile-titel' }, p.name),
+          el('div', { class: 'zeile-hinweis' }, zuletztText(z)),
+        ]),
+        startKnopf(p, { hervor: i === 0 && !t }),
+      ]);
+    }),
+  ]);
+}
+
 // ---------- Projektplan ----------
 
 function projektplan(d, plan, liste, fest, farbe, anfragen) {
@@ -310,6 +335,7 @@ function projektplan(d, plan, liste, fest, farbe, anfragen) {
     });
   }
 
+  const zuletztId = stoppuhr.zuletzt()[0]?.projektId;
   const heuteX = pos(plan.heute);
   const minBreite = 240 + liste.length * 55;
 
@@ -326,8 +352,11 @@ function projektplan(d, plan, liste, fest, farbe, anfragen) {
         ]),
         ...(zeilen.length ? zeilen.map((z) => el('div', { class: 'plan-zeile' }, [
           el('div', { class: 'plan-name' }, [
-            el('a', { class: 'plan-titel', href: `#/projekte/${z.p.id}` }, z.p.name),
-            el('div', { class: 'knopfreihe eng plan-info' }, [el('span', { class: 'zahl' }, z.stunden), z.chip]),
+            el('div', { class: 'fuellung' }, [
+              el('a', { class: 'plan-titel', href: `#/projekte/${z.p.id}` }, z.p.name),
+              el('div', { class: 'knopfreihe eng plan-info' }, [el('span', { class: 'zahl' }, z.stunden), z.chip]),
+            ]),
+            !z.anfrage && ['auftrag', 'laeuft'].includes(z.p.status) ? startKnopf(z.p, { hervor: z.p.id === zuletztId }) : null,
           ]),
           el('div', { class: 'plan-bahn' }, [
             el('div', { class: `plan-balken${z.anfrage ? ' anfrage' : ''}`, style: `left:${z.links.toFixed(2)}%;width:${z.breite.toFixed(2)}%;${z.stil ?? ''}` }),
