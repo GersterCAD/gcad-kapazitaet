@@ -3,7 +3,8 @@
 
 import * as speicher from './speicher.js';
 import { leereDaten, pruefeDaten } from './kern/daten.js';
-import { beispielDaten } from './kern/beispiel.js';
+import { beispielDaten, beispielTermine } from './kern/beispiel.js';
+import { alsText } from './kern/datum.js';
 
 let satz = 'echt';
 let daten = leereDaten();
@@ -13,8 +14,20 @@ export const aktiverSatz = () => satz;
 export const istBeispiel = () => satz === 'beispiel';
 export const aktuell = () => daten;
 
+/** Heute als Text (YYYY-MM-DD) */
+export const heute = () => alsText(new Date());
+
+/** Optionen für plane(): heute und Termine. Bis der Kalender angebunden ist (Schritt 7), nur bei den Beispieldaten Termine. */
+export const planOptionen = () => ({ heute: heute(), termine: istBeispiel() ? beispielTermine() : [] });
+
+/** Jetzigen Stand sichern, z. B. vor dem Löschen eines Projekts */
+export const sichern = (anlass) => speicher.sicherungAnlegen(satz, daten, anlass);
+
 export function abonnieren(f) { hoerer.add(f); return () => hoerer.delete(f); }
 const melden = () => hoerer.forEach((f) => f(daten));
+
+/** Ansicht neu zeichnen, ohne Daten zu ändern (z. B. Formular auf- oder zuklappen) */
+export const neuZeichnen = () => melden();
 
 /** Beim Start: zuletzt aktiven Datensatz laden. Beim allerersten Start die Beispieldaten zeigen. */
 export async function starten() {

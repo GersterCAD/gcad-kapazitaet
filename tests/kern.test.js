@@ -84,7 +84,7 @@ test('Planung: früheste Deadline zuerst', () => {
   const d = beispielDaten();
   const plan = plane(d, { heute: HEUTE, termine: beispielTermine() });
   const name = (id) => d.projekte.find((p) => p.id === id).name;
-  assert.deepEqual(plan.reihenfolge.map(name), ['Kanzlei Muster · Empfang', 'Projekt Frankfurt · 6 Pos.', 'Gastro Getränkebar']);
+  assert.deepEqual(plan.reihenfolge.map(name), ['Kanzlei Muster · Empfang', 'Projekt Frankfurt', 'Gastro Getränkebar']);
   // Planung beginnt heute, nicht in der Vergangenheit
   const kanzlei = d.projekte.find((p) => p.name.startsWith('Kanzlei'));
   assert.equal(plan.tag('2026-10-27').projekte[kanzlei.id] > 0, true);

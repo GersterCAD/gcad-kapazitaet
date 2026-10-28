@@ -28,7 +28,7 @@ export function beispielDaten() {
     ],
   });
   projekt('frankfurt', {
-    nr: '26-044', name: 'Projekt Frankfurt · 6 Pos.', kunde: 'Beispiel Bau GmbH', art: 'Werkplanung',
+    nr: '26-044', name: 'Projekt Frankfurt', kunde: 'Beispiel Bau GmbH', art: 'Werkplanung',
     status: 'laeuft', schaetzungH: 54.5, start: '2026-10-26', deadline: '2026-11-27', prioritaet: 1, farbe: '#7C93A0',
     positionen: [
       { nr: '1', bezeichnung: 'Schrankwand Flur', sollH: 10 },

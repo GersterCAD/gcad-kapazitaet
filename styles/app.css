@@ -49,6 +49,7 @@ a.chip:hover { color: var(--text); }
   display: flex; flex-direction: column; gap: 24px;
 }
 .inhalt:focus { outline: none; }
+.inhalt.schmal { max-width: 1200px; } /* Einstellungen im Entwurf */
 
 .seitenkopf { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
 .seitenkopf > div:first-child { flex: 1; min-width: 240px; }
@@ -82,6 +83,159 @@ p.zeile-hinweis { margin-top: 8px; }
 .meldung { margin-top: 16px; font-size: 13px; color: var(--text-2); }
 .meldung.gruen { color: var(--gruen); }
 
+/* ---------- Bausteine aus dem Entwurf (Einstellungen, Projekt) ---------- */
+
+.icon { display: inline-flex; }
+.mit-abstand-mittel { margin-top: 16px; }
+.fett { font-weight: 600; }
+.fett-mittel { font-weight: 500; }
+.block { display: block; }
+.kartenkopf { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.kartentext { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--text-2); }
+.kartentext.dunkel { color: var(--text); margin-top: 4px; }
+.stapel { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.stapel.gross { gap: 16px; }
+.stapel > .kachel.klein { margin-top: 0; }
+.knopfreihe.eng { gap: 8px; margin-top: 0; }
+.knopfreihe.zwischen { justify-content: space-between; }
+.knopfreihe.grundlinie { align-items: baseline; gap: 16px; margin-top: 0; }
+
+/* Runde Knöpfe 44 px (Stepper) */
+.rund {
+  width: 44px; height: 44px; flex: none; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--linie); border-radius: var(--radius-pille); background: var(--weiss); color: var(--text);
+}
+.rund:hover { background: var(--leiste); }
+.stepper { display: flex; align-items: center; gap: 16px; }
+.stepper-wert { width: 64px; text-align: center; font-size: 17px; font-weight: 600; }
+.stepper.breit { gap: 8px; }
+.stepper.breit .stepper-wert {
+  flex: 1; width: auto; height: 44px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--linie); border-radius: var(--radius-feld); background: var(--weiss); font-size: 20px;
+}
+.einheit { font-size: 12px; font-weight: 400; color: var(--text-2); margin-left: 4px; }
+
+/* Auswahlpillen: Wochentage 40 × 40, Positionen 36 hoch */
+.wahlreihe { display: flex; gap: 8px; flex-wrap: wrap; }
+.wahlreihe.eng { gap: 4px; }
+.wahl {
+  position: relative; min-width: 44px; height: 36px; padding: 0 12px;
+  border: 1px solid var(--linie); border-radius: var(--radius-pille); background: var(--weiss); color: var(--text); font-size: 13px;
+}
+.wahl::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+.wahl[aria-pressed="true"] { border-color: var(--text); background: var(--text); color: var(--weiss); font-weight: 500; }
+.wahl.tag { width: 40px; min-width: 40px; height: 40px; padding: 0; font-size: 12px; }
+.wahl.tag[aria-pressed="false"] { border: 1px dashed var(--termin); color: var(--text-2); }
+.wahl.stahl[aria-pressed="true"] { border-color: var(--stahl); background: var(--stahl); }
+.wahl[aria-disabled="true"] { cursor: default; }
+
+/* Regler (Puffer) */
+.regler { width: 140px; height: 44px; margin: 0; accent-color: var(--stahl); cursor: pointer; }
+.reglerzeile { display: flex; align-items: center; gap: 16px; }
+.reglerzeile .regler { flex: 1; max-width: 280px; }
+
+/* Formulare ohne eigenen Entwurf */
+.feldgruppe { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.feld-label { font-size: 12px; font-weight: 500; }
+.feldgruppe .feld { width: 100%; height: 44px; }
+.feld:disabled { background: var(--leiste); color: var(--text-2); }
+.feldpaar { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: 16px; }
+.formular { gap: 16px; }
+.formular .knopfreihe { margin-top: 0; }
+.meldung.rot { color: var(--rot); }
+.textknopf { padding: 0; border: 0; background: none; color: var(--stahl); font-size: inherit; font-weight: 500; position: relative; }
+.textknopf::after { content: ""; position: absolute; inset: -12px -8px; }
+.textknopf:hover { color: var(--stahl-dunkel); }
+.feldgruppe .textknopf { font-size: 12px; }
+.pille.gefahr { color: var(--rot); }
+.pille.hoch { height: 36px; }
+.kreuz {
+  width: 44px; height: 44px; flex: none; padding: 0; border: 0; background: none; color: var(--text-2);
+  display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-pille);
+}
+.kreuz:hover { color: var(--rot); }
+
+/* Kacheln als Knopf (Blockzeit, Urlaub antippen zum Bearbeiten) */
+.kachel.reihe { flex-direction: row; align-items: center; gap: 16px; }
+.knopf-kachel { width: 100%; border: 0; text-align: left; color: var(--text); font: inherit; }
+.knopf-kachel:hover { box-shadow: inset 0 0 0 1px var(--linie); }
+.farbstreifen { width: 12px; height: 40px; border-radius: 3px; flex: none; background: var(--stahl); }
+.farbstreifen.buero { background: var(--greige); }
+.farbstreifen.entwicklung { background: var(--greige-hell); box-shadow: inset 0 0 0 1px var(--greige); }
+.farbstreifen.anfrage { background: var(--weiss); border: 1.5px dashed var(--stahl); }
+.wert-mittel { font-size: 17px; font-weight: 600; }
+.listenzeile { display: flex; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--leiste); font-size: 13px; align-items: baseline; }
+.spalte-datum { width: 88px; flex: none; font-size: 13px; }
+.spalte-kurz { width: 64px; flex: none; }
+.kalenderpunkt { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+
+/* Chips */
+.chip.dunkel { background: var(--text); color: var(--weiss); }
+.abzeichen {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--weiss); background: var(--text); border-radius: var(--radius-pille); padding: 2px 8px;
+}
+
+/* Projektliste */
+.projektzeile { text-decoration: none; color: var(--text); flex-wrap: wrap; }
+.projektzeile:hover { color: var(--text); }
+.projektzeile:hover .zeile-titel { color: var(--stahl); }
+.projektzeile > .fuellung { min-width: 200px; }
+.projektzeile-werte { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.spalte-abgabe { margin: 0; width: 104px; text-align: right; }
+.spalte-status { width: 112px; display: flex; justify-content: flex-end; }
+.spalte-plan { width: 64px; display: flex; }
+.spalte-stunden { width: 96px; text-align: right; }
+.seite > .umschalter { align-self: flex-start; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.seite > .umschalter::-webkit-scrollbar { display: none; }
+.umschalter button .sekundaer { font-weight: 400; }
+.umschalter button { white-space: nowrap; flex: none; }
+
+/* Projektseite */
+.raster-kacheln { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 16px; }
+.kennzahl { margin-top: 8px; font-size: 32px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
+.kachel-unter { margin-top: 4px; font-size: 13px; color: var(--text-2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.zweispaltig { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+.spalte-haupt { flex: 2 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+.spalte-seite { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+h2.label { font-size: 11px; font-weight: 500; letter-spacing: 0.12em; line-height: 1.5; }
+
+.meilenstein { flex-wrap: wrap; }
+.haken { width: 44px; height: 44px; flex: none; padding: 0; border: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center; }
+.haken-kreis {
+  width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--linie); background: var(--weiss); color: var(--weiss);
+}
+.haken[aria-checked="true"] .haken-kreis { border-color: var(--text); background: var(--text); }
+.meilenstein-text { flex: 1; min-width: 180px; padding: 4px 0; border: 0; background: none; text-align: left; font: inherit; color: var(--text); }
+.meilenstein-titel { font-size: 14px; font-weight: 500; }
+.meilenstein-titel.erledigt { font-weight: 400; color: var(--text-2); text-decoration: line-through; }
+.meilenstein-text:hover .meilenstein-titel { color: var(--stahl); }
+.erinnerung { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
+
+.positionszeile { display: flex; align-items: center; gap: 16px; min-height: 44px; border-bottom: 1px solid var(--leiste); flex-wrap: wrap; }
+.positionsname { width: 220px; max-width: 100%; font-size: 13px; }
+.balken { flex: 1; min-width: 160px; position: relative; height: 12px; border-radius: var(--radius-pille); background: var(--leiste); }
+.balken-ist { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--radius-pille); background: var(--stahl); }
+.balken-ist.ueber { background: var(--rot); }
+.balken-soll { position: absolute; top: -4px; bottom: -4px; border-left: 2px solid var(--text); }
+.positionswert { width: 96px; text-align: right; font-size: 13px; }
+
+.knopf-gross {
+  height: 44px; border: 0; border-radius: var(--radius-pille); background: var(--stahl); color: var(--weiss);
+  font-size: 14px; font-weight: 500;
+}
+.knopf-gross:hover { background: var(--stahl-dunkel); }
+.buchungszeile { display: flex; align-items: center; gap: 16px; min-height: 44px; border-top: 1px solid var(--linie); font-size: 13px; }
+.buchungszeile .kreuz { margin-right: -12px; }
+
+/* Positionen im Formular */
+.ganze-breite { grid-column: 1 / -1; }
+.positionsform { display: grid; max-width: 720px; grid-template-columns: 72px 1fr 96px 44px; gap: 8px; align-items: center; padding: 4px 0; }
+.positionsform .feld { width: 100%; min-width: 0; height: 44px; }
+.positionsform.kopfzeile { padding-bottom: 0; }
+
 /* Handybreite: Abstände enger, Überschrift kleiner */
 @media (max-width: 640px) {
   .kopf, .bereiche { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
@@ -91,4 +245,20 @@ p.zeile-hinweis { margin-top: 8px; }
   .inhalt { padding: 24px 16px 48px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
   h1, .titel-1 { font-size: 26px; }
   .kopf-trenner { display: none; }
+  .zeile:has(.stepper), .zeile:has(.regler) { flex-wrap: wrap; }
+  .zeile:has(.wahlreihe) { flex-wrap: wrap; }
+  .zeile:has(.wahlreihe) > .fuellung, .zeile:has(.regler) > .fuellung { flex-basis: 100%; }
+  .zeile .regler { flex: 1; }
+  .projektzeile-werte { width: 100%; padding-left: 28px; gap: 8px 16px; }
+  .spalte-abgabe, .spalte-stunden { text-align: left; width: auto; }
+  .spalte-status, .spalte-plan { width: auto; }
+  .positionsname { width: 100%; }
+  .positionszeile { gap: 8px 16px; padding: 8px 0; }
+  .meilenstein { display: grid; grid-template-columns: 44px 1fr; gap: 0 12px; align-items: start; }
+  .meilenstein .haken { grid-row: 1 / span 3; }
+  .meilenstein .spalte-datum { width: auto; padding-top: 8px; }
+  .meilenstein-text { min-width: 0; padding: 2px 0; }
+  .meilenstein .erinnerung { grid-column: 2; padding-bottom: 4px; }
+  .positionsform { grid-template-columns: 56px 1fr 72px 44px; }
+  .kennzahl { font-size: 26px; }
 }

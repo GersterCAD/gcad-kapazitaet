@@ -5,6 +5,9 @@ import { el, plusIcon } from './ui.js';
 import { isoWoche, tagLang } from './kern/datum.js';
 import { platzhalter } from './ansichten/platzhalter.js';
 import { einstellungen } from './ansichten/einstellungen.js';
+import { projektliste } from './ansichten/projekte.js';
+import { projektseite, projektKontext } from './ansichten/projekt.js';
+import { projektformular, formularKontext, formularVergessen } from './ansichten/projektformular.js';
 import * as zustand from './zustand.js';
 
 const BEREICHE = [
@@ -34,20 +37,13 @@ const ANSICHTEN = {
   projekte: () => ({
     bereich: 'projekte',
     kontext: 'Projekte',
-    inhalt: platzhalter({
-      label: 'Projekte',
-      titel: 'Alle Projekte',
-      text: 'Projekte anlegen, Positionen, Meilensteine und Zeit buchen. Das folgt in Schritt 4.',
-    }),
+    inhalt: projektliste(),
   }),
   'projekte/neu': () => ({
     bereich: 'projekte',
-    kontext: ['Neues Projekt ', el('span', { class: 'sekundaer' }, '· noch nicht gespeichert')],
-    inhalt: platzhalter({
-      label: 'Projekt anlegen',
-      titel: 'Neues Projekt',
-      text: 'Das Formular zum Anlegen folgt in Schritt 4.',
-    }),
+    kontext: formularKontext(null),
+    status: 'Nicht gespeichert',
+    inhalt: projektformular(null),
   }),
   anfragen: () => ({
     bereich: 'anfragen',
@@ -73,6 +69,7 @@ const ANSICHTEN = {
     bereich: 'einstellungen',
     kontext: 'Einstellungen',
     status: 'Änderungen gelten sofort für die Planung',
+    schmal: true,
     inhalt: einstellungen(),
   }),
 };
@@ -111,18 +108,33 @@ function navigation(aktiv) {
     BEREICHE.map((b) => el('a', { href: `#/${b.id}`, 'aria-current': b.id === aktiv ? 'page' : null }, b.name)));
 }
 
+// Adressen mit Projekt-ID: #/projekte/<id> und #/projekte/<id>/bearbeiten
+function ansichtFuer(pfad) {
+  if (ANSICHTEN[pfad]) return ANSICHTEN[pfad]();
+  const m = pfad.match(/^projekte\/([^/]+)(\/bearbeiten)?$/);
+  if (m) {
+    const p = zustand.aktuell().projekte.find((x) => x.id === m[1]);
+    if (m[2]) return { bereich: 'projekte', kontext: formularKontext(m[1]), status: 'Nicht gespeichert', inhalt: projektformular(m[1]) };
+    return { bereich: 'projekte', kontext: p ? projektKontext(p) : 'Projekt', status: p ? 'Gespeichert' : null, inhalt: projektseite(m[1]) };
+  }
+  return ANSICHTEN.uebersicht();
+}
+
 function zeigen() {
   const pfad = location.hash.replace(/^#\/?/, '') || 'uebersicht';
-  const ansicht = (ANSICHTEN[pfad] || ANSICHTEN.uebersicht)();
+  const fokus = document.activeElement?.dataset?.fokus;
+  const ansicht = ansichtFuer(pfad);
   const titel = BEREICHE.find((b) => b.id === ansicht.bereich)?.name;
   document.title = `${titel} · Kapazität`;
 
   const app = document.getElementById('app');
-  const inhalt = el('main', { class: 'inhalt', id: 'inhalt', tabindex: '-1' }, ansicht.inhalt);
+  const inhalt = el('main', { class: `inhalt${ansicht.schmal ? ' schmal' : ''}`, id: 'inhalt', tabindex: '-1' }, ansicht.inhalt);
   app.replaceChildren(kopfzeile(ansicht), navigation(ansicht.bereich), inhalt);
+  // Nach dem Neuzeichnen den Fokus zurück auf denselben Knopf (wichtig für Tastatur und Vorlesen)
+  if (fokus) app.querySelector(`[data-fokus="${CSS.escape(fokus)}"]`)?.focus({ preventScroll: true });
 }
 
-window.addEventListener('hashchange', () => { zeigen(); window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => { formularVergessen(); zeigen(); window.scrollTo(0, 0); });
 zustand.abonnieren(zeigen);
 zustand.starten()
   .catch((f) => console.error('Daten konnten nicht geladen werden:', f))

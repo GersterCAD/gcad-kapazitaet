@@ -46,6 +46,21 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026.
 - `lernwert.js`: Mittel aus (Ist − Schätzung) / Schätzung je Projektart, ab 3 abgeschlossenen Projekten.
 - Beispieltermine (`beispielTermine()` in `beispiel.js`) ersetzen bei den Beispieldaten das Kalender-JSON. Die Beispieldaten sind so gewählt, dass die Anfrage aus dem Entwurf (56 h + 10 % ab KW 49) am Do 17.12.2026 fertig ist – bei Änderungen an `beispiel.js` den Test laufen lassen.
 - Ergänzung zur Datenstruktur: Einplanungen haben eine `id` (für „verschieben“).
+## Ansichten (`js/ansichten/`)
+
+- `einstellungen.js`: Arbeitszeit (Stepper, Arbeitstage, Puffer-Regler), geblockte Zeiten, Urlaub und Feiertage, Kalender, Daten. Blockzeit und Urlaub: Kachel antippen = bearbeiten.
+- `projekte.js`: Projektliste mit Filter (Aktiv, Anfragen, Abgeschlossen, Alle). `projekt.js`: Projektseite nach `Projekt.dc.html`. `projektformular.js`: anlegen/bearbeiten (`#/projekte/neu`, `#/projekte/<id>/bearbeiten`).
+- Für Liste, Formulare und den Bereich „Daten“ gibt es keinen Entwurf: nur Bausteine aus dem Entwurf verwenden (Karten, Zeilen, Pillen, Chips, Stepper, Schalter).
+- Jede Änderung zeichnet die ganze Ansicht neu. Was nur die Oberfläche betrifft (offenes Formular, gewählte Position), liegt in Modulvariablen; `zustand.neuZeichnen()` zeichnet ohne Datenänderung. Knöpfe mit `data-fokus` bekommen nach dem Neuzeichnen den Fokus zurück.
+- Löschen immer mit Rückfrage (`loeschKnopf`). Vor dem Löschen eines Projekts wird eine Sicherung angelegt.
+- Regeln aus Schritt 4:
+  - Samstag-Pille: an = Samstage dürfen vorgeschlagen werden (`samstagErlaubt: 'vorschlag'`), aus = nie. Nie automatisch.
+  - Hat ein Projekt Positionen, ist die Schätzung die Summe ihrer Soll-Stunden. Soll je Position wird mit dem Projekt-Puffer angezeigt.
+  - Neues Projekt mit Deadline bekommt den Meilenstein „Abgabe“ (Typ Deadline). Ändert sich die Deadline, wandert dieser Meilenstein mit.
+  - Ergänzungen zur Datenstruktur: Meilenstein `notiz` (optional), Kalender `regelAn` (merkt die Regel, solange der Kalender ausgeschaltet ist).
+  - Lernwert-Empfehlung: Abweichung in %, auf 0,5 gerundet, höchstens 20 %.
+  - `verschiebbar` (Bürozeit) wird gespeichert, der Rechenkern nutzt es noch nicht.
+
 - PWA: `manifest.json`, `sw.js` (Netz zuerst, ohne Netz aus dem Cache). **Bei jeder neuen oder geänderten Datei `VERSION` in `sw.js` hochzählen und die Datei in `HUELLE` eintragen.**
 - Schrift: Inter als woff2 in `schrift/` (OFL), nicht von Google laden. Bildzeichen in `bilder/`.
 - Lokal starten: `python3 -m http.server 8130` im Repo, dann http://localhost:8130.
