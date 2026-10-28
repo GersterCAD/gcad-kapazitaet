@@ -5,6 +5,7 @@ import { el, plusIcon } from './ui.js';
 import { isoWoche, tagLang } from './kern/datum.js';
 import { platzhalter } from './ansichten/platzhalter.js';
 import { einstellungen } from './ansichten/einstellungen.js';
+import { uebersicht } from './ansichten/uebersicht.js';
 import { projektliste } from './ansichten/projekte.js';
 import { projektseite, projektKontext } from './ansichten/projekt.js';
 import { projektformular, formularKontext, formularVergessen } from './ansichten/projektformular.js';
@@ -27,11 +28,7 @@ const ANSICHTEN = {
       kontext: [`KW ${isoWoche(heute).woche} `, el('span', { class: 'sekundaer' }, `· ${tagLang(heute)}`)],
       kalenderStatus: true,
       aktionen: true,
-      inhalt: platzhalter({
-        label: 'Übersicht',
-        titel: 'Auslastung der nächsten 12 Wochen',
-        text: 'Hier kommen Kennzahlen, Wochendiagramm, Vorschläge und Projektplan hin. Das folgt in Schritt 5.',
-      }),
+      inhalt: uebersicht(),
     };
   },
   projekte: () => ({
@@ -78,7 +75,7 @@ const ANSICHTEN = {
 function kalenderStatus() {
   return el('span', { class: 'kopf-status' }, [
     el('span', { class: 'punkt', 'aria-hidden': 'true' }),
-    'Kalender nicht verbunden',
+    zustand.istBeispiel() ? 'Beispieltermine' : 'Kalender nicht verbunden',
   ]);
 }
 
@@ -111,6 +108,7 @@ function navigation(aktiv) {
 // Adressen mit Projekt-ID: #/projekte/<id> und #/projekte/<id>/bearbeiten
 function ansichtFuer(pfad) {
   if (ANSICHTEN[pfad]) return ANSICHTEN[pfad]();
+  if (/^anfragen\/[^/]+$/.test(pfad)) return ANSICHTEN.anfragen(); // Anfrage öffnen – die Seite folgt in Schritt 6
   const m = pfad.match(/^projekte\/([^/]+)(\/bearbeiten)?$/);
   if (m) {
     const p = zustand.aktuell().projekte.find((x) => x.id === m[1]);

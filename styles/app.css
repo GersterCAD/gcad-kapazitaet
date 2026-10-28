@@ -236,6 +236,83 @@ h2.label { font-size: 11px; font-weight: 500; letter-spacing: 0.12em; line-heigh
 .positionsform .feld { width: 100%; min-width: 0; height: 44px; }
 .positionsform.kopfzeile { padding-bottom: 0; }
 
+/* ---------- Übersicht (Main.dc.html) ---------- */
+
+.raster-kacheln.breit { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
+.kennzahl-zeile { margin-top: 8px; }
+.kennzahl.ohne-abstand { margin-top: 0; }
+.hinweisband {
+  display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap;
+  padding: 16px 24px; border: 1px solid var(--linie); border-radius: var(--radius-karte); background: var(--weiss);
+}
+.hinweisband .chip { margin-top: 1px; }
+.hinweisband-text { flex: 1; min-width: 240px; font-size: 14px; line-height: 1.5; }
+.spalte-haupt-flach { flex: 2 1 640px; min-width: 0; }
+
+.legende { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+.legende-eintrag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; }
+.legende-farbe { display: block; width: 12px; height: 12px; border-radius: 3px; }
+.seg-termin { background: var(--termin); }
+.seg-buero { background: var(--greige); }
+.seg-entwicklung { background: var(--greige-hell); box-shadow: inset 0 0 0 1px var(--greige); }
+.seg-anfrage { background: var(--weiss); box-shadow: inset 0 0 0 1.5px var(--stahl); }
+
+.scrollkasten { overflow-x: auto; }
+.wochen { display: flex; gap: 8px; }
+.woche { flex: 1 1 0; min-width: 52px; display: flex; flex-direction: column; align-items: stretch; }
+.woche-chips { height: 24px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.chip.klein { padding: 2px 8px; }
+.chip.rahmen { background: var(--leiste); color: var(--text); box-shadow: inset 0 0 0 1px var(--linie); padding: 1px 8px; }
+.woche-saeule {
+  position: relative; height: 240px; display: flex; flex-direction: column-reverse; gap: 1px;
+  background: repeating-linear-gradient(to top, transparent 0 calc(var(--linien) - 1px), var(--leiste) calc(var(--linien) - 1px) var(--linien));
+}
+.seg { width: 100%; flex: none; border-radius: 2px; }
+.kap-linie { position: absolute; left: -4px; right: -4px; height: 0; border-top: 2px solid var(--text); }
+.woche-frei {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: 4px;
+  background: repeating-linear-gradient(135deg, var(--leiste) 0 6px, var(--weiss) 6px 12px);
+}
+.woche-frei span { font-size: 11px; font-weight: 500; color: var(--text-2); writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 0.12em; text-transform: uppercase; }
+.woche-kw { margin-top: 8px; text-align: center; font-size: 12px; font-weight: 600; }
+.woche-klein { text-align: center; font-size: 11px; color: var(--text-2); }
+.woche-notiz { text-align: center; font-size: 10px; color: var(--text-2); margin-top: 2px; }
+
+.vorschlag { padding: 16px; border-radius: var(--radius-karte); background: var(--weiss); }
+.vorschlag-titel { font-size: 13px; font-weight: 600; line-height: 1.4; }
+.vorschlag-text { margin-top: 4px; font-size: 13px; line-height: 1.5; color: var(--text-2); }
+.vorschlag-knoepfe { margin-top: 12px; }
+.vorschlag .pille.haupt { border: 0; }
+
+.terminzeile { display: flex; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--leiste); }
+.termin-wann { width: 72px; flex: none; font-size: 12px; font-weight: 500; }
+.termin-was { min-width: 0; }
+.termin-meta { font-size: 11px; color: var(--text-2); }
+
+.plan-zeile { display: flex; align-items: center; min-height: 64px; border-bottom: 1px solid var(--leiste); }
+.plan-zeile.plan-kopf { min-height: 0; border-bottom: 0; }
+.plan-zeile.fuss { min-height: 16px; border-bottom: 0; margin-top: 8px; }
+.plan-name { width: 240px; flex: none; padding-right: 16px; }
+.plan-titel { display: block; font-size: 13px; font-weight: 500; color: var(--text); text-decoration: none; }
+.plan-titel:hover { color: var(--stahl); }
+.plan-info { margin-top: 2px; font-size: 11px; color: var(--text-2); }
+.plan-info .chip { padding: 1px 8px; }
+.plan-kw { flex: 1; display: grid; grid-template-columns: repeat(var(--wochen), 1fr); border-bottom: 1px solid var(--linie); }
+.plan-kw div { padding: 0 0 8px 8px; font-size: 11px; font-weight: 500; color: var(--text-2); border-left: 1px solid var(--leiste); white-space: nowrap; }
+.plan-bahn {
+  flex: 1; position: relative; height: 64px;
+  background: repeating-linear-gradient(to right, var(--leiste) 0 1px, transparent 1px calc(100% / var(--wochen)));
+}
+.plan-zeile.fuss .plan-bahn { height: 16px; background: none; }
+.plan-balken { position: absolute; top: 22px; height: 20px; border-radius: var(--radius-pille); }
+.plan-balken.anfrage { background: var(--weiss); border: 1.5px dashed var(--stahl); }
+.plan-marke { position: absolute; top: 0; height: 64px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
+.plan-marke .fahne { margin-top: 2px; display: flex; }
+.plan-marke .raute { margin-top: 25px; display: flex; }
+.plan-datum { font-size: 10px; color: var(--text-2); white-space: nowrap; margin-top: auto; margin-bottom: 2px; }
+.heute-linie { position: absolute; top: 0; bottom: 0; border-left: 1.5px solid var(--stahl); }
+.heute-text { position: absolute; transform: translateX(-50%); font-size: 11px; font-weight: 500; color: var(--stahl); }
+
 /* Handybreite: Abstände enger, Überschrift kleiner */
 @media (max-width: 640px) {
   .kopf, .bereiche { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
@@ -261,4 +338,6 @@ h2.label { font-size: 11px; font-weight: 500; letter-spacing: 0.12em; line-heigh
   .meilenstein .erinnerung { grid-column: 2; padding-bottom: 4px; }
   .positionsform { grid-template-columns: 56px 1fr 72px 44px; }
   .kennzahl { font-size: 26px; }
+  .plan-name { width: 180px; }
+  .hinweisband { padding: 16px; }
 }

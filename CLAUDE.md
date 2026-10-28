@@ -50,6 +50,8 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026.
 
 - `einstellungen.js`: Arbeitszeit (Stepper, Arbeitstage, Puffer-Regler), geblockte Zeiten, Urlaub und Feiertage, Kalender, Daten. Blockzeit und Urlaub: Kachel antippen = bearbeiten.
 - `projekte.js`: Projektliste mit Filter (Aktiv, Anfragen, Abgeschlossen, Alle). `projekt.js`: Projektseite nach `Projekt.dc.html`. `projektformular.js`: anlegen/bearbeiten (`#/projekte/neu`, `#/projekte/<id>/bearbeiten`).
+- `uebersicht.js`: Übersicht nach `Main.dc.html` – Kennzahlen, Warnband, Stunden je Woche (4 px je Stunde, schrumpft ab 60 h), Vorschläge (je Projekt höchstens einer pro Art; beim Verschieben der kleinste, der reicht; übernommene mit Rückgängig), diese Woche aus dem Kalender (Termine und Blockzeiten), Projektplan. Anfragen erscheinen gestrichelt mit der regulären Variante aus `anfragePruefen()` – jede Anfrage für sich, sie belegen sich gegenseitig nicht.
+- Beispieldaten: Getränkebar hat fixierte Einplanungen in KW 45–48, damit Frankfurt knapp wird und Warnung und Vorschläge sichtbar sind.
 - Für Liste, Formulare und den Bereich „Daten“ gibt es keinen Entwurf: nur Bausteine aus dem Entwurf verwenden (Karten, Zeilen, Pillen, Chips, Stepper, Schalter).
 - Jede Änderung zeichnet die ganze Ansicht neu. Was nur die Oberfläche betrifft (offenes Formular, gewählte Position), liegt in Modulvariablen; `zustand.neuZeichnen()` zeichnet ohne Datenänderung. Knöpfe mit `data-fokus` bekommen nach dem Neuzeichnen den Fokus zurück.
 - Löschen immer mit Rückfrage (`loeschKnopf`). Vor dem Löschen eines Projekts wird eine Sicherung angelegt.

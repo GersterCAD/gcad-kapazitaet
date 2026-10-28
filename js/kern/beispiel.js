@@ -87,6 +87,12 @@ export function beispielDaten() {
   verteilt('alt2', '2026-05-04', 46);
   verteilt('alt3', '2026-07-06', 30);
 
+  // Von Hand festgelegt (fixiert): Getränkebar parallel in KW 45–48. Dadurch wird Frankfurt knapp,
+  // die Warnung erscheint und das Tool schlägt „verschieben“, „kürzen“, Samstag und längere Tage vor.
+  for (const [woche, stunden] of [['2026-W45', 8], ['2026-W46', 12], ['2026-W47', 14], ['2026-W48', 10]]) {
+    d.einplanungen.push({ id: neueId(), projektId: id.bar, woche, stunden, art: 'regulaer', fixiert: true });
+  }
+
   d.blockzeiten.push(
     { id: neueId(), titel: 'Büro, Rechnungen, lexoffice', art: 'buero', stundenProWoche: 4, wochentag: [5], von: '08:00', bis: '12:00', kuerzbar: false, verschiebbar: false },
     { id: neueId(), titel: 'Entwicklung neuer Dinge', art: 'entwicklung', stundenProWoche: 6, wochentag: [1, 3], von: '14:00', bis: '17:00', kuerzbar: true, verschiebbar: false },

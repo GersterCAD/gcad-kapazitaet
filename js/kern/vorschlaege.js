@@ -20,6 +20,8 @@ const kwSpanne = (liste) => {
   return k.length === 1 ? `KW ${k[0]}` : `KW ${k[0]}–${k[k.length - 1]}`;
 };
 const kurz = (d) => d.slice(8, 10) + '.' + d.slice(5, 7) + '.';
+/** Satzende: Punkt nur, wenn nicht schon einer da ist („Fr 27.11.“) */
+const ende = (t) => (t.endsWith('.') ? t : `${t}.`);
 
 /**
  * Vorschläge für alle Projekte mit Engpass.
@@ -46,7 +48,7 @@ export function vorschlaege(daten, opts = {}) {
       const neu = plane(daten, { ...opts, uebernommen: probe });
       v.loest = neu.projekte[id]?.status === 'imPlan';
       v.warnungDanach = warnung(daten, wochen(neu, neu.heute, 26)).aktiv;
-      v.text = v.loest ? v.textLoest : v.textTeil;
+      v.text = ende(v.loest ? v.textLoest : v.textTeil);
       delete v.textLoest; delete v.textTeil;
     }
     ergebnis.push({ projektId: id, problem: info, fehltH: runde(fehlt), vorschlaege: kandidaten });
@@ -57,7 +59,7 @@ export function vorschlaege(daten, opts = {}) {
 /** Vorschlag übernehmen: legt ihn in daten.vorschlaegeUebernommen ab (ändert daten). Gibt die ID zurück. */
 export function uebernehmen(daten, vorschlag) {
   const id = neueId();
-  daten.vorschlaegeUebernommen.push({ ...vorschlag.aenderung, id, titel: vorschlag.titel, zeit: new Date().toISOString() });
+  daten.vorschlaegeUebernommen.push({ ...vorschlag.aenderung, id, titel: vorschlag.titel, text: vorschlag.text, zeit: new Date().toISOString() });
   return id;
 }
 
@@ -102,7 +104,7 @@ function verschieben(daten, plan, projekt, info) {
     const satz = `${name(anderes)}: ${zahl(x.stunden)} h aus KW ${kw(x.woche)} in KW ${kw(nachDeadline)} schieben`;
     liste.push({
       schluessel: `verschieben|${x.id}`, typ: 'verschieben', aktion: 'Verschieben', titel: satz, aenderung,
-      textLoest: `${anderes.deadline ? `Die Deadline am ${tagKurz(ausText(anderes.deadline))} hält weiterhin. ` : ''}${name(projekt)} schafft dann die Deadline am ${tagKurz(ausText(info.deadline))}.`,
+      textLoest: `${anderes.deadline ? `Die Deadline am ${tagKurz(ausText(anderes.deadline))} hält weiterhin. ` : ''}${name(projekt)} schafft dann die Deadline am ${tagKurz(ausText(info.deadline))}`,
       textTeil: `Schafft ${zahl(x.stunden)} h Platz. Allein reicht das für ${name(projekt)} nicht.`,
     });
   }
@@ -133,7 +135,7 @@ function kuerzen(daten, plan, projekt, info, fehlt) {
     schluessel: `kuerzen|${blockzeitId}|${Object.keys(tage).join(',')}`, typ: 'kuerzen', aktion: 'Kürzen',
     titel: `${block.titel}: in ${kwSpanne(wochenListe)} um ${zahl(summe)} h kürzen`,
     aenderung: { typ: 'kuerzen', projektId: projekt.id, blockzeitId, tage },
-    textLoest: `Damit hält ${name(projekt)} die Deadline am ${tagKurz(ausText(info.deadline))} ohne Mehrarbeit.`,
+    textLoest: `Damit hält ${name(projekt)} die Deadline am ${tagKurz(ausText(info.deadline))} ohne Mehrarbeit`,
     textTeil: `Bringt ${zahl(summe)} h. Allein reicht das für ${name(projekt)} nicht.`,
   };
 }
