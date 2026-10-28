@@ -53,6 +53,7 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026.
 - `uebersicht.js`: Übersicht nach `Main.dc.html` – Kennzahlen, Warnband, Stunden je Woche (4 px je Stunde, schrumpft ab 60 h), Vorschläge (je Projekt höchstens einer pro Art; beim Verschieben der kleinste, der reicht; übernommene mit Rückgängig), diese Woche aus dem Kalender (Termine und Blockzeiten), Projektplan. Anfragen erscheinen gestrichelt mit der regulären Variante aus `anfragePruefen()` – jede Anfrage für sich, sie belegen sich gegenseitig nicht.
 - `anfrage.js`: Anfrage prüfen nach `Anfrage.dc.html` (`#/anfragen` neu, `#/anfragen/<id>` gemerkte Anfrage). Empfohlen = erste Variante, die den Wunschtermin hält, sonst Regulär; Samstage zählen nicht, wenn sie in den Einstellungen aus sind. „Als Anfrage merken“ speichert ein Projekt mit Status Anfrage, „Als Auftrag einplanen“ mit Status Auftrag (Deadline = Wunschtermin, ohne Wunschtermin das reguläre Fertigdatum) und öffnet die Projektseite. Samstage oder lange Tage werden dabei nicht eingeplant – dafür gibt es danach die Vorschläge.
 - Beispieldaten: Getränkebar hat fixierte Einplanungen in KW 45–48, damit Frankfurt knapp wird und Warnung und Vorschläge sichtbar sind.
+- `kalender.js` (Ansicht): Woche und Monat mit Terminen, Blockzeiten und Meilensteinen. Termin antippen → `terminRegeln[uid].zaehltH` (eigene Stunden) und `projektId`. Mit Projekt wird ein Zeiteintrag mit `terminUid` angelegt (zählt als Ist) und beim Ändern ersetzt. Export der Meilensteine als `.ics`, danach `kalenderId` am Meilenstein („· Kalender“ in der Erinnerung).
 - Für Liste, Formulare und den Bereich „Daten“ gibt es keinen Entwurf: nur Bausteine aus dem Entwurf verwenden (Karten, Zeilen, Pillen, Chips, Stepper, Schalter).
 - Jede Änderung zeichnet die ganze Ansicht neu. Was nur die Oberfläche betrifft (offenes Formular, gewählte Position), liegt in Modulvariablen; `zustand.neuZeichnen()` zeichnet ohne Datenänderung. Knöpfe mit `data-fokus` bekommen nach dem Neuzeichnen den Fokus zurück.
 - Löschen immer mit Rückfrage (`loeschKnopf`). Vor dem Löschen eines Projekts wird eine Sicherung angelegt.
@@ -63,6 +64,14 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026.
   - Ergänzungen zur Datenstruktur: Meilenstein `notiz` (optional), Kalender `regelAn` (merkt die Regel, solange der Kalender ausgeschaltet ist).
   - Lernwert-Empfehlung: Abweichung in %, auf 0,5 gerundet, höchstens 20 %.
   - `verschiebbar` (Bürozeit) wird gespeichert, der Rechenkern nutzt es noch nicht.
+
+## Kalender (Schritt 7)
+
+- Lesen: Der Browser darf iCloud nicht direkt abfragen (CORS). Eine GitHub Action im privaten Repo `gcad-kapazitaet-daten` holt die ICS-Adressen (Secret `KALENDER_QUELLEN`) und schreibt `kalender.json`. Vorlage und Anleitung in `daten-repo/` – dort liegen keine Daten. Die Action checkt dieses öffentliche Repo aus und startet `daten-repo/kalender-holen.mjs`.
+- `js/kern/ics.js`: ICS lesen (Zeitzonen über `Intl`, Serien DAILY/WEEKLY/MONTHLY/YEARLY mit INTERVAL, COUNT, UNTIL, BYDAY, BYMONTHDAY, EXDATE, geänderte Einzeltermine; „frei“ und abgesagte Termine fallen weg) und Meilensteine schreiben (ganztägig, VALARM um 9 Uhr, UID `<id>@kapazitaet.gerster-cad.de`, steigende SEQUENCE).
+- Termine in `kalender.json`: `{ uid, kalender, titel, ganztaegig, start, ende }`, zeitgebundene in UTC (ISO), ganztägige als Datum mit exklusivem Ende. Serientermine: `uid|YYYYMMDDTHHMM`.
+- `js/github.js`: Zugang (Repo + Fine-grained-Token) nur lokal in `meta.github`, lehnt öffentliche Repos ab. `js/kalender.js`: holt `kalender.json` beim Start, alle 15 Minuten und beim Zurückkehren, speichert sie lokal (`meta.kalender`), nicht in den Kapazitätsdaten. Zum Ausprobieren auch als Datei ladbar.
+- Kostenloser GitHub-Plan: 2.000 Action-Minuten im Monat für private Repos – deshalb läuft die Action nur Mo–Sa 6–21 Uhr.
 
 - PWA: `manifest.json`, `sw.js` (Netz zuerst, ohne Netz aus dem Cache). **Bei jeder neuen oder geänderten Datei `VERSION` in `sw.js` hochzählen und die Datei in `HUELLE` eintragen.**
 - Schrift: Inter als woff2 in `schrift/` (OFL), nicht von Google laden. Bildzeichen in `bilder/`.

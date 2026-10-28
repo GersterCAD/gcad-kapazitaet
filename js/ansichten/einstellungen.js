@@ -8,6 +8,9 @@ import * as zustand from '../zustand.js';
 import * as speicher from '../speicher.js';
 import * as austausch from '../austausch.js';
 import { zusammenfassung, neueId } from '../kern/daten.js';
+import * as kalender from '../kalender.js';
+import * as github from '../github.js';
+import { meilensteineExportieren, offeneMeilensteine } from './kalender.js';
 import { feiertageBW, feiertag } from '../kern/feiertage.js';
 import { abwesenheit } from '../kern/kapazitaet.js';
 import { ausText, alsText, plusTage, tagKurz, tagLang } from '../kern/datum.js';
@@ -351,30 +354,99 @@ const REGEL_TEXT = {
 const KALENDER_FARBE = ['var(--stahl)', 'var(--termin)', 'var(--greige)'];
 
 function kalenderKarte(d) {
-  const kalender = d.einstellungen.kalender;
+  const info = kalender.info();
+  // Kalender aus den Einstellungen und aus der gelesenen Datei zusammen zeigen
+  const namen = [...d.einstellungen.kalender.map((k) => k.name)];
+  for (const k of info.kalender ?? []) if (!namen.includes(k.name)) namen.push(k.name);
+  const lesen = zustand.istBeispiel() ? 'Beispieltermine' : github.verbunden() ? 'über GitHub' : info.quelle === 'datei' ? 'aus Datei' : 'noch nicht verbunden';
+
+  const datei = el('input', {
+    type: 'file', accept: '.json,application/json', class: 'nur-vorleser', tabindex: '-1', 'aria-hidden': 'true',
+    onchange: async () => {
+      const f = datei.files[0]; datei.value = '';
+      if (!f) return;
+      try { await kalender.dateiLaden(f); } catch (fehler) { alert(fehler.message); }
+    },
+  });
+  const offene = offeneMeilensteine(d);
+
   return el('section', { class: 'karte', 'aria-labelledby': 'h-kal' }, [
     el('h2', { id: 'h-kal' }, 'Kalender'),
     el('p', { class: 'kartentext' }, 'Termine werden gelesen und von der Tageskapazität abgezogen. Meilensteine und Deadlines werden als Erinnerung zurückgeschrieben.'),
-    el('div', { class: 'label mit-abstand-gross' }, 'Lesen · Kalender noch nicht verbunden'),
-    el('div', { class: 'mit-abstand' }, kalender.map((k, i) => {
+    el('div', { class: 'label mit-abstand-gross' }, `Lesen · ${lesen}`),
+    el('div', { class: 'mit-abstand' }, namen.map((name, i) => {
+      const k = d.einstellungen.kalender.find((x) => x.name === name) ?? { name, regel: 'alle' };
+      const gelesen = (info.kalender ?? []).find((x) => x.name === name);
       const an = k.regel !== 'ignorieren';
+      const zusatz = gelesen ? (gelesen.ok === false ? ' · Abruf fehlgeschlagen' : ` · ${gelesen.anzahl} ${gelesen.anzahl === 1 ? "Termin" : "Termine"}`) : '';
       return el('div', { class: 'zeile schmal' }, [
         el('span', { class: 'kalenderpunkt', style: `background:${KALENDER_FARBE[i % KALENDER_FARBE.length]}`, 'aria-hidden': 'true' }),
         el('div', { class: 'fuellung' }, [
-          el('div', { class: 'zeile-titel' }, k.name),
-          el('div', { class: 'zeile-hinweis' }, REGEL_TEXT[k.regel] ?? k.regel),
+          el('div', { class: 'zeile-titel' }, name),
+          el('div', { class: 'zeile-hinweis' }, `${REGEL_TEXT[k.regel] ?? k.regel}${zusatz}`),
         ]),
-        schalter(an, `${k.name} berücksichtigen`, (neu) => setze((e) => {
-          const x = e.kalender.find((y) => y.name === k.name);
+        schalter(an, `${name} berücksichtigen`, (neu) => setze((e) => {
+          let x = e.kalender.find((y) => y.name === name);
+          if (!x) { x = { name, regel: 'alle' }; e.kalender.push(x); }
           if (neu) { x.regel = x.regelAn ?? 'alle'; delete x.regelAn; } else { x.regelAn = x.regel; x.regel = 'ignorieren'; }
         }), `kal-${i}`),
       ]);
     })),
+    zustand.istBeispiel() ? null : el('div', { class: 'zeile ohne-linie' }, [
+      el('div', { class: 'fuellung' }, [
+        el('div', { class: 'zeile-titel' }, 'Abgleich'),
+        el('div', { class: `zeile-hinweis${info.fehler ? ' rot' : ''}` }, info.fehler
+          ? info.fehler
+          : info.abgeglichen ? `Zuletzt ${kalender.vorText(info.abgeglichen)}${info.stand ? ` · Kalenderstand ${kalender.vorText(info.stand)}` : ''}` : github.verbunden() ? 'Noch nicht abgeglichen.' : 'Verbinde GitHub unter „Daten“, oder lade eine kalender.json.'),
+      ]),
+      github.verbunden()
+        ? el('button', { type: 'button', class: 'pille', 'data-fokus': 'kal-abgleich', onclick: () => kalender.abgleichen() }, 'Jetzt abgleichen')
+        : el('button', { type: 'button', class: 'pille', onclick: () => datei.click() }, 'kalender.json laden'),
+      datei,
+    ]),
     el('div', { class: 'label mit-abstand-gross' }, 'Schreiben'),
     el('div', { class: 'kachel klein mit-abstand' }, [
       el('div', { class: 'zeile-titel' }, 'Kalender „Kapazität · Gerster CAD“'),
       el('div', { class: 'zeile-hinweis' }, 'Meilensteine und Deadlines als ganztägige Termine · Erinnerung 2 Tage vorher'),
+      el('div', { class: 'knopfreihe' }, [el('button', {
+        type: 'button', class: 'pille', disabled: !offene.length, 'data-fokus': 'kal-export',
+        onclick: () => meilensteineExportieren(offene),
+      }, `Offene Meilensteine exportieren (${offene.length})`)]),
+      el('div', { class: 'zeile-hinweis' }, 'Die Datei öffnen und den Kalender wählen. Ein erneuter Import aktualisiert die Termine, statt sie zu verdoppeln.'),
     ]),
+  ]);
+}
+
+// ---------- Abgleich über GitHub ----------
+
+function githubBereich() {
+  const fehler = el('div', { class: 'meldung rot', role: 'alert' });
+  if (github.verbunden()) {
+    return el('div', {}, [
+      el('div', { class: 'zeile' }, [
+        el('div', { class: 'fuellung' }, [
+          el('div', { class: 'zeile-titel' }, 'Abgleich über GitHub'),
+          el('div', { class: 'zeile-hinweis' }, `Verbunden mit ${github.repo()} (privat). Der Token liegt nur auf diesem Gerät.`),
+        ]),
+        el('button', { type: 'button', class: 'pille', 'data-fokus': 'gh-trennen', onclick: async () => { await github.trennen(); zustand.neuZeichnen(); } }, 'Trennen'),
+      ]),
+    ]);
+  }
+  const repo = el('input', { class: 'feld', type: 'text', value: github.repo(), autocomplete: 'off', spellcheck: 'false' });
+  const token = el('input', { class: 'feld', type: 'password', autocomplete: 'off', placeholder: 'github_pat_…', spellcheck: 'false' });
+  return el('div', { class: 'kachel klein formular mit-abstand' }, [
+    el('div', { class: 'zeile-titel' }, 'Abgleich über GitHub'),
+    el('div', { class: 'zeile-hinweis' }, 'Für den Kalender und später für den Abgleich zwischen deinen Geräten. Nur ein privates Repo. Der Token braucht nur Lese- und Schreibrecht auf dieses eine Repo und bleibt auf diesem Gerät.'),
+    feldGruppe('Privates Repo', repo),
+    feldGruppe('Token', token),
+    fehler,
+    el('div', { class: 'knopfreihe' }, [el('button', {
+      type: 'button', class: 'pille haupt',
+      onclick: async (ev) => {
+        ev.currentTarget.disabled = true;
+        try { await github.verbinden(repo.value, token.value); token.value = ''; await kalender.abgleichen(); zustand.neuZeichnen(); } catch (f) { fehler.textContent = f.message; ev.currentTarget.disabled = false; }
+      },
+    }, 'Verbinden')]),
   ]);
 }
 
@@ -487,6 +559,7 @@ function datenKarte() {
     ]),
     pruefung,
     meldung,
+    zustand.istBeispiel() ? null : githubBereich(),
     sicherungen,
   ]);
 }

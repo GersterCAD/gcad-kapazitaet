@@ -3,14 +3,16 @@
 
 import { el, plusIcon } from './ui.js';
 import { isoWoche, tagLang } from './kern/datum.js';
-import { platzhalter } from './ansichten/platzhalter.js';
 import { einstellungen } from './ansichten/einstellungen.js';
 import { uebersicht } from './ansichten/uebersicht.js';
+import { kalenderSeite, kalenderVergessen } from './ansichten/kalender.js';
 import { anfrageSeite, anfrageKopf, anfrageVergessen } from './ansichten/anfrage.js';
 import { projektliste } from './ansichten/projekte.js';
 import { projektseite, projektKontext } from './ansichten/projekt.js';
 import { projektformular, formularKontext, formularVergessen } from './ansichten/projektformular.js';
 import * as zustand from './zustand.js';
+import * as kalender from './kalender.js';
+import * as github from './github.js';
 
 const BEREICHE = [
   { id: 'uebersicht', name: 'Übersicht' },
@@ -48,11 +50,7 @@ const ANSICHTEN = {
     bereich: 'kalender',
     kontext: 'Kalender',
     kalenderStatus: true,
-    inhalt: platzhalter({
-      label: 'Kalender',
-      titel: 'Termine und Blockzeiten',
-      text: 'Wochen- und Monatsansicht der Termine. Das folgt in Schritt 7.',
-    }),
+    inhalt: kalenderSeite(),
   }),
   einstellungen: () => ({
     bereich: 'einstellungen',
@@ -63,11 +61,20 @@ const ANSICHTEN = {
   }),
 };
 
-// Kalender ist erst ab Schritt 7 angebunden.
+// Kalenderstatus in der Kopfzeile: grün = abgeglichen (weniger als eine Stunde alt), gelb = alt oder Fehler
 function kalenderStatus() {
-  return el('span', { class: 'kopf-status' }, [
-    el('span', { class: 'punkt', 'aria-hidden': 'true' }),
-    zustand.istBeispiel() ? 'Beispieltermine' : 'Kalender nicht verbunden',
+  const i = kalender.info();
+  let farbe = '', text = 'Kalender nicht verbunden';
+  if (zustand.istBeispiel()) text = 'Beispieltermine';
+  else if (i.fehler) { farbe = 'gelb'; text = 'Kalender: Abgleich fehlgeschlagen'; }
+  else if (i.abgeglichen) {
+    const frisch = Date.now() - new Date(i.abgeglichen) < 60 * 60 * 1000;
+    farbe = frisch ? 'gruen' : 'gelb';
+    text = `Kalender ${i.quelle === 'datei' ? 'aus Datei' : 'abgeglichen'} · ${kalender.vorText(i.abgeglichen)}`;
+  }
+  return el('a', { class: 'kopf-status', href: '#/kalender', title: i.fehler || null }, [
+    el('span', { class: `punkt ${farbe}`.trim(), 'aria-hidden': 'true' }),
+    text,
   ]);
 }
 
@@ -128,11 +135,14 @@ function zeigen() {
 window.addEventListener('hashchange', () => {
   formularVergessen();
   anfrageVergessen(location.hash.replace(/^#\/?/, ''));
+  kalenderVergessen();
   zeigen();
   window.scrollTo(0, 0);
 });
 zustand.abonnieren(zeigen);
-zustand.starten()
+kalender.abonnieren(zeigen);
+Promise.all([zustand.starten(), github.starten(), kalender.starten()])
+  .then(() => kalender.automatisch())
   .catch((f) => console.error('Daten konnten nicht geladen werden:', f))
   .finally(zeigen);
 

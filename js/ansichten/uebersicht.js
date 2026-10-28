@@ -10,6 +10,7 @@ import { anfragePruefen } from '../kern/anfrage.js';
 import { termineNachTag } from '../kern/kapazitaet.js';
 import { ausText, alsText, plusTage, tagKurz, isoWoche, montag } from '../kern/datum.js';
 import { planChip } from './projekt.js';
+import { uhrzeit } from '../kalender.js';
 
 const ZEITRAUM = [
   { wochen: 4, name: '4 Wochen' },
@@ -252,12 +253,11 @@ function dieseWoche(d, opts) {
   const sonntag = alsText(plusTage(montag(ausText(heute)), 6));
   const proTag = termineNachTag(d, opts.termine);
   const zeilen = [];
-  const uhr = (iso) => iso.slice(11, 16);
   for (let t = ausText(heute); alsText(t) <= sonntag; t = plusTage(t, 1)) {
     const tag = alsText(t);
     for (const { termin, h } of proTag.get(tag) ?? []) {
-      const zeit = termin.ganztaegig ? 'ganztägig' : `${uhr(termin.start)}–${uhr(termin.ende)}`;
-      zeilen.push({ tag, sort: termin.ganztaegig ? '00:00' : uhr(termin.start), titel: termin.titel, meta: `${zeit} · zählt ${zahlText(h)} h` });
+      const zeit = termin.ganztaegig ? 'ganztägig' : `${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}`;
+      zeilen.push({ tag, sort: termin.ganztaegig ? '00:00' : uhrzeit(termin.start), titel: termin.titel, meta: `${zeit} · zählt ${zahlText(h)} h` });
     }
     const wt = t.getDay();
     for (const b of d.blockzeiten) {

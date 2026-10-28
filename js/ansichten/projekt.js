@@ -8,6 +8,7 @@ import { plane } from '../kern/planung.js';
 import { lernwerte, LERNWERT_AB } from '../kern/lernwert.js';
 import { ausText, alsText, plusTage, tagKurz, isoWoche } from '../kern/datum.js';
 import { loeschKnopf } from './einstellungen.js';
+import { meilensteineExportieren } from './kalender.js';
 
 const PLAN_CHIP = { imPlan: ['gruen', 'im Plan'], knapp: ['gelb', 'knapp'], zuSpaet: ['rot', 'zu spät'] };
 
@@ -179,7 +180,7 @@ function meilensteinZeile(m, s) {
       ]),
       m.notiz ? el('span', { class: 'zeile-hinweis block' }, m.notiz) : null,
     ]),
-    el('span', { class: 'erinnerung' }, [glockeIcon(), erledigt ? 'erledigt' : erinnerungText(m.erinnerungTage)]),
+    el('span', { class: 'erinnerung' }, [glockeIcon(), erledigt ? 'erledigt' : `${erinnerungText(m.erinnerungTage)}${m.kalenderId ? ' · Kalender' : ''}`]),
   ]);
 }
 
@@ -233,6 +234,10 @@ function meilensteinFormular(p, s, m) {
       el('button', { type: 'button', class: 'pille haupt', onclick: speichern }, 'Speichern'),
       el('button', { type: 'button', class: 'pille', onclick: schliessen }, 'Abbrechen'),
       el('div', { class: 'fuellung' }),
+      m ? el('button', {
+        type: 'button', class: 'pille', title: 'Als .ics herunterladen und in den Kalender „Kapazität · Gerster CAD“ importieren',
+        onclick: async () => { s.meilensteinOffen = null; await meilensteineExportieren([m], `meilenstein-${m.datum}.ics`); },
+      }, m.kalenderId ? 'Im Kalender aktualisieren (.ics)' : 'In den Kalender (.ics)') : null,
       m ? loeschKnopf('Löschen', () => { s.meilensteinOffen = null; zustand.aendern((x) => { x.meilensteine = x.meilensteine.filter((y) => y.id !== m.id); }); }) : null,
     ]),
   ]);

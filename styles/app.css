@@ -366,6 +366,54 @@ h2.label { font-size: 11px; font-weight: 500; letter-spacing: 0.12em; line-heigh
 .pille.haupt.gross { padding: 0 32px; }
 .pille.gross::after { top: 0; bottom: 0; }
 
+/* ---------- Kalender (kein eigener Entwurf, Bausteine aus dem Entwurf) ---------- */
+
+a.kopf-status { text-decoration: none; }
+a.kopf-status:hover { color: var(--text); }
+.zeile-hinweis.rot { color: var(--rot); }
+.titel-klein { font-size: 17px; }
+.stepper-schmal { max-width: 280px; }
+.pille:disabled { color: var(--termin); cursor: default; }
+.pille:disabled:hover { background: var(--weiss); }
+
+.wochenraster { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.kalendertag { padding: 12px; border: 1px solid var(--linie); border-radius: var(--radius-karte); min-height: 240px; display: flex; flex-direction: column; gap: 4px; }
+.kalendertag.frei { background: var(--leiste); border-color: var(--leiste); }
+.kalendertag.heute { box-shadow: inset 0 0 0 1px var(--stahl); border-color: var(--stahl); }
+.kalendertag-kopf { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.kalendertag-liste { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.k-eintrag {
+  display: flex; gap: 8px; align-items: flex-start; width: 100%; padding: 8px; border: 0; border-radius: var(--radius-feld);
+  background: var(--weiss); text-align: left; font: inherit; color: var(--text); text-decoration: none; min-height: 44px;
+}
+.kalendertag:not(.frei) .k-eintrag { background: var(--leiste); }
+.k-eintrag .zeile-text { font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+.k-eintrag .kalenderpunkt, .k-eintrag .legende-farbe { margin-top: 3px; flex: none; }
+.k-eintrag .icon { margin-top: 2px; flex: none; }
+.k-eintrag.termin:hover, .k-eintrag.meilenstein:hover { box-shadow: inset 0 0 0 1px var(--linie); color: var(--text); }
+.k-eintrag.gewaehlt { box-shadow: inset 0 0 0 1.5px var(--text); }
+.k-eintrag.leise .zeile-text { color: var(--text-2); }
+
+.monatsraster { display: grid; grid-template-columns: repeat(7, minmax(96px, 1fr)); gap: 4px; min-width: 700px; }
+.monatskopf { padding: 0 8px 8px; }
+.monatstag {
+  min-height: 104px; padding: 8px; border: 1px solid var(--leiste); border-radius: var(--radius-feld); background: var(--weiss);
+  display: flex; flex-direction: column; gap: 2px; align-items: stretch; text-align: left; font: inherit; color: var(--text);
+}
+.monatstag:hover { border-color: var(--linie); }
+.monatstag.anderer { background: var(--leiste); color: var(--text-2); }
+.monatstag.heute { border-color: var(--stahl); box-shadow: inset 0 0 0 1px var(--stahl); }
+.monatstag-zahl { font-size: 13px; font-weight: 600; }
+.monatstag-eintrag { display: flex; align-items: center; gap: 4px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kalenderpunkt.klein { width: 6px; height: 6px; }
+.raute-klein { width: 6px; height: 6px; flex: none; border: 1.5px solid var(--text); transform: rotate(45deg); }
+
+@media (max-width: 1100px) {
+  .wochenraster { grid-template-columns: 1fr; }
+  .kalendertag { min-height: 0; }
+  .kalendertag-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+}
+
 /* Handybreite: Abstände enger, Überschrift kleiner */
 @media (max-width: 640px) {
   .kopf, .bereiche { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
@@ -391,6 +439,12 @@ h2.label { font-size: 11px; font-weight: 500; letter-spacing: 0.12em; line-heigh
   .meilenstein .erinnerung { grid-column: 2; padding-bottom: 4px; }
   .positionsform { grid-template-columns: 56px 1fr 72px 44px; }
   .kennzahl { font-size: 26px; }
+  .kartenkopf > h2 { font-size: 17px; flex-basis: 100%; order: -1; }
+  .monatsraster { min-width: 0; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+  .monatskopf { padding: 0 0 8px; text-align: center; letter-spacing: 0.06em; }
+  .monatstag { min-height: 56px; padding: 4px; align-items: center; }
+  .monatstag-eintrag { justify-content: center; }
+  .monatstag-text, .monatstag .termin-meta { display: none; }
   .plan-name { width: 180px; }
   .anfrage-eingaben { padding: 24px 16px; border-right: 0; border-bottom: 1px solid var(--linie); }
   .anfrage-ergebnis { padding: 24px 16px 48px; }

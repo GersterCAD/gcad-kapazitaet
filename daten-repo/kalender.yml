@@ -1,0 +1,48 @@
+# GitHub Action für das PRIVATE Repo gcad-kapazitaet-daten.
+# Ablage dort: .github/workflows/kalender.yml
+# Secret dort: KALENDER_QUELLEN (siehe app/daten-repo/kalender-holen.mjs)
+#
+# Läuft Mo–Sa von 6 bis 21 Uhr (deutsche Zeit) alle 15 Minuten. Ein privates Repo hat im kostenlosen
+# GitHub-Plan 2.000 Action-Minuten im Monat – rund um die Uhr alle 15 Minuten wären etwa 2.900.
+
+name: Kalender holen
+
+on:
+  schedule:
+    - cron: '*/15 4-19 * * 1-6'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kalender
+  cancel-in-progress: false
+
+jobs:
+  holen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: GersterCAD/gcad-kapazitaet
+          path: app
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Kalender holen
+        run: node app/daten-repo/kalender-holen.mjs kalender.json
+        env:
+          KALENDER_QUELLEN: ${{ secrets.KALENDER_QUELLEN }}
+      - name: Speichern, wenn geändert
+        run: |
+          if [ -n "$(git status --porcelain kalender.json)" ]; then
+            git config user.name "Kalender"
+            git config user.email "actions@users.noreply.github.com"
+            git add kalender.json
+            git commit -m "Kalender abgeglichen"
+            git pull --rebase --autostash
+            git push
+          fi

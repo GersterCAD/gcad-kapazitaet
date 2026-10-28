@@ -5,6 +5,7 @@ import * as speicher from './speicher.js';
 import { leereDaten, pruefeDaten } from './kern/daten.js';
 import { beispielDaten, beispielTermine } from './kern/beispiel.js';
 import { alsText } from './kern/datum.js';
+import * as kalender from './kalender.js';
 
 let satz = 'echt';
 let daten = leereDaten();
@@ -17,8 +18,8 @@ export const aktuell = () => daten;
 /** Heute als Text (YYYY-MM-DD) */
 export const heute = () => alsText(new Date());
 
-/** Optionen für plane(): heute und Termine. Bis der Kalender angebunden ist (Schritt 7), nur bei den Beispieldaten Termine. */
-export const planOptionen = () => ({ heute: heute(), termine: istBeispiel() ? beispielTermine() : [] });
+/** Optionen für plane(): heute und Termine. Bei den Beispieldaten erfundene Termine, sonst die aus dem Kalender. */
+export const planOptionen = () => ({ heute: heute(), termine: istBeispiel() ? beispielTermine() : kalender.termine() });
 
 /** Jetzigen Stand sichern, z. B. vor dem Löschen eines Projekts */
 export const sichern = (anlass) => speicher.sicherungAnlegen(satz, daten, anlass);
