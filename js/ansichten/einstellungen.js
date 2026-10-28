@@ -12,6 +12,7 @@ import * as kalender from '../kalender.js';
 import * as github from '../github.js';
 import * as abgleich from '../abgleich.js';
 import { unterschiede } from '../kern/abgleich.js';
+import { ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN } from '../kern/abrechnung.js';
 import { meilensteineExportieren, offeneMeilensteine } from './kalender.js';
 import { feiertageBW, feiertag } from '../kern/feiertage.js';
 import { abwesenheit } from '../kern/kapazitaet.js';
@@ -40,6 +41,7 @@ export function einstellungen() {
       blockzeitenKarte(d),
       urlaubKarte(d),
       kalenderKarte(d),
+      abrechnungKarte(d),
       datenKarte(),
     ]),
   ]);
@@ -351,6 +353,28 @@ function urlaubFormular(a) {
       el('div', { class: 'fuellung' }),
       a ? loeschKnopf('Löschen', () => { urlaubOffen = null; zustand.aendern((d) => { d.abwesenheiten = d.abwesenheiten.filter((x) => x.id !== a.id); }); }) : null,
     ]),
+  ]);
+}
+
+// ---------- Abrechnung (Vorbereitung Lexware Office, kein eigener Entwurf) ----------
+
+function abrechnungKarte(d) {
+  const art = d.einstellungen.abrechnungZusammenfassen ?? STANDARD_ZUSAMMENFASSEN;
+  const gewaehlt = ZUSAMMENFASSEN.find((x) => x.id === art);
+  return el('section', { class: 'karte', 'aria-labelledby': 'h-abr' }, [
+    el('h2', { id: 'h-abr' }, 'Abrechnung'),
+    el('p', { class: 'kartentext' }, 'So werden deine Stunden später als Rechnungszeilen an Lexware Office übergeben.'),
+    el('div', { class: 'mit-abstand' }, [
+      el('div', { class: 'zeile ohne-linie' }, [
+        el('div', { class: 'fuellung' }, [
+          el('div', { class: 'zeile-titel', id: 'l-zusammen' }, 'Stunden zusammenfassen'),
+          el('div', { class: 'zeile-hinweis' }, `${gewaehlt.text}${art === 'tag' ? ' · Standard' : ''}`),
+        ]),
+        el('div', { class: 'wahlreihe', role: 'group', 'aria-labelledby': 'l-zusammen' }, ZUSAMMENFASSEN.map((x) =>
+          wahlPille(x.name, x.id === art, () => setze((e) => { e.abrechnungZusammenfassen = x.id; }), { art: 'breit', fokus: `zusammen-${x.id}` }))),
+      ]),
+    ]),
+    el('p', { class: 'zeile-hinweis' }, 'Die Übergabe an Lexware Office folgt. Auf jeder Projektseite siehst du schon, welche Zeilen offen sind.'),
   ]);
 }
 

@@ -229,6 +229,7 @@ h2.label { font-size: 11px; font-weight: 500; letter-spacing: 0.12em; line-heigh
 .knopf-gross:hover { background: var(--stahl-dunkel); }
 .buchungszeile { display: flex; align-items: center; gap: 16px; min-height: 44px; border-top: 1px solid var(--linie); font-size: 13px; }
 .buchungszeile .kreuz { margin-right: -12px; }
+.buchungszeile.oben { align-items: baseline; padding: 10px 0; min-height: 0; }
 
 /* Positionen im Formular */
 .ganze-breite { grid-column: 1 / -1; }

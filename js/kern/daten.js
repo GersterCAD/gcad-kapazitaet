@@ -28,6 +28,7 @@ export function standardEinstellungen() {
     samstagH: 8,
     bundesland: 'BW',
     timerRundung: 15,
+    abrechnungZusammenfassen: 'tag',
     kalender: [
       { name: 'Gerster CAD', regel: 'alle' },
       { name: 'Privat', regel: 'ganztaegig' },

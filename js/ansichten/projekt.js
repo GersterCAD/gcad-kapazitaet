@@ -11,6 +11,7 @@ import { loeschKnopf } from './einstellungen.js';
 import { meilensteineExportieren } from './kalender.js';
 import * as stoppuhr from '../stoppuhr.js';
 import { laufzeit, dauerText } from '../kern/timer.js';
+import { rechnungsZeilen, ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN } from '../kern/abrechnung.js';
 
 const PLAN_CHIP = { imPlan: ['gruen', 'im Plan'], knapp: ['gelb', 'knapp'], zuSpaet: ['rot', 'zu spät'] };
 
@@ -84,7 +85,7 @@ export function projektseite(id) {
     kennzahlen(d, p, plan, info),
     el('div', { class: 'zweispaltig' }, [
       el('div', { class: 'spalte-haupt' }, [meilensteine(d, p, s), sollIst(d, p)]),
-      el('aside', { class: 'spalte-seite' }, [zeitBuchen(d, p, s), lernwertKarte(d, p)]),
+      el('aside', { class: 'spalte-seite' }, [zeitBuchen(d, p, s), abrechnungKarte(d, p), lernwertKarte(d, p)]),
     ]),
   ]);
 }
@@ -425,6 +426,26 @@ function timerBlock(d, p, s) {
       onclick: () => stoppuhr.starten(p.id, s.pos),
     }, [el('span', { class: 'icon', 'aria-hidden': 'true', html: '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 1.2v9.6L10.5 6z" fill="currentColor"/></svg>' }), s.pos ? `Timer starten · Pos. ${s.pos}` : 'Timer starten']),
     meldung,
+  ]);
+}
+
+// ---------- Offen zur Abrechnung (Vorschau für Lexware Office) ----------
+
+function abrechnungKarte(d, p) {
+  const zeilen = rechnungsZeilen(d, p.id);
+  if (!zeilen.length) return null;
+  const summe = zeilen.reduce((a, z) => a + z.stunden, 0);
+  const art = ZUSAMMENFASSEN.find((x) => x.id === (d.einstellungen.abrechnungZusammenfassen ?? STANDARD_ZUSAMMENFASSEN));
+  const gezeigt = zeilen.slice(-5).reverse();
+  return el('section', { class: 'karte', 'aria-labelledby': 'h-abr-p' }, [
+    el('h2', { id: 'h-abr-p', class: 'label' }, 'Offen zur Abrechnung'),
+    el('div', { class: 'kennzahl zahl mit-abstand-mittel' }, `${zahlText(summe, 2)} h`),
+    el('p', { class: 'kartentext ohne-abstand' }, [`${zeilen.length} ${zeilen.length === 1 ? 'Rechnungszeile' : 'Rechnungszeilen'}, ${art.name} zusammengefasst · `, el('a', { href: '#/einstellungen' }, 'ändern')]),
+    el('div', { class: 'mit-abstand-mittel' }, gezeigt.map((z) => el('div', { class: 'buchungszeile oben' }, [
+      el('span', { class: 'fuellung zeile-text' }, z.text),
+      el('span', { class: 'fett-mittel zahl' }, `${zahlText(z.stunden, 2)} h`),
+    ]))),
+    zeilen.length > gezeigt.length ? el('div', { class: 'zeile-hinweis' }, `… und ${zeilen.length - gezeigt.length} ältere`) : null,
   ]);
 }
 
