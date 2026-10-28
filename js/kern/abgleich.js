@@ -16,6 +16,7 @@ export const BEREICHE = [
   { liste: 'terminRegeln', name: 'Terminregel', schluessel: 'uid' },
   { liste: 'vorschlaegeUebernommen', name: 'Vorschlag' },
   { liste: 'kunden', name: 'Kunde' },
+  { liste: 'angebote', name: 'Angebot' },
 ];
 
 const gleich = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -105,6 +106,7 @@ function titel(liste, x, lokal, entfernt) {
     case 'abwesenheiten': return `${x.art === 'krank' ? 'Krank' : 'Urlaub'} ${x.von} – ${x.bis}`;
     case 'vorschlaegeUebernommen': return x.titel ?? 'Vorschlag';
     case 'kunden': return x.name;
+    case 'angebote': return [x.nummer, x.kunde].filter(Boolean).join(' · ');
     default: return x.uid ?? x.id ?? '';
   }
 }

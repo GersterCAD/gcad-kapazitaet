@@ -27,7 +27,7 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026, Folge-Entwurf Index B vom 
 - Reines HTML, CSS und JavaScript (ES-Module), kein Build-Schritt. Veröffentlicht über GitHub Pages, Repo `gcad-kapazitaet`.
 - `index.html` lädt `styles/ci.css` (CI-Farben, Schrift, Pillen, Chips, Karten), `styles/app.css` (Kopfzeile, Bereiche, Inhalt) und `js/app.js`.
 - `js/app.js`: Kopfzeile, Navigation, Bereiche über die Adresse (`#/uebersicht`, `#/projekte`, `#/anfragen`, `#/kalender`, `#/einstellungen`).
-  - Navigation nach Index B (`Navigation.dc.html`): Übersicht · Projekte · Angebote · (Abrechnung, sobald gebaut) · Kalender. Angebote führt bis zum Angebots-Schritt auf „Anfrage prüfen“. Einstellungen als Zahnrad in der Kopfzeile.
+  - Navigation nach Index B (`Navigation.dc.html`): Übersicht · Projekte · Angebote · (Abrechnung, sobald gebaut) · Kalender. Angebote hat den Umschalter „Anfragen · Angebote“ (Anfragen = Anfrage prüfen). Einstellungen als Zahnrad in der Kopfzeile.
   - Kopfzeile: Timer-Pille (läuft = dunkel mit Stopp, über 10 h = gelb „Timer prüfen“, sonst „… weiter“ mit dem zuletzt benutzten Projekt), ein Statuspunkt für die Verbindungen („Kalender“, später „· Lexware“), Zahnrad.
   - Bis 640 px (iPhone.dc.html): Seitentitel mit „‹“ statt Marke, Bereiche als Tab-Leiste unten mit Bildzeichen, laufender Timer als dunkle Leiste darüber (nicht auf der Projektseite des laufenden Projekts).
 - `js/kern/`: Rechenkern **ohne Oberfläche** (kein DOM, kein `window`), damit er später in Werk.ai eingebunden werden kann. Tests in `tests/`.
@@ -82,6 +82,16 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026, Folge-Entwurf Index B vom 
 - `js/kern/abgleich.js`: Drei-Wege-Zusammenführung mit dem Stand des letzten Abgleichs (`meta.abgleich`: Daten + sha). Einträge je ID, Einstellungen je Feld. Nur auf einer Seite geändert → übernehmen. Auf beiden verschieden geändert (oder hier gelöscht, dort geändert) → **Konflikt**: der Abgleich hält an (`meta.abgleichKonflikt`), die App zeigt ein Hinweisband und in Einstellungen → Daten je Eintrag „Dieses Gerät“ / „Anderes Gerät“. Vor jedem Übernehmen wird gesichert.
 - Schreiben über die GitHub-API mit sha: Hat ein anderes Gerät inzwischen geschrieben (409), wird neu geholt und zusammengeführt.
 - Repos: `GersterCAD/gcad-kapazitaet` (öffentlich, GitHub Pages https://gerstercad.github.io/gcad-kapazitaet/) und `GersterCAD/gcad-kapazitaet-daten` (privat, Daten + Kalender-Action). Commits mit der Noreply-Adresse `345525017+GersterCAD@users.noreply.github.com`.
+
+## Angebote (Index B: Angebote, Angebot, Auftrag)
+
+- `js/kern/angebot.js`: `daten.angebote = [{ id, nummer ('AN 26-031', laufend je Jahr), datum, gueltigBis (+30 Tage), kunde, projektname, art, status (entwurf | versendet | angenommen | abgelehnt), stundensatz (überschreibt den Kunden), pufferImPreis, kopftext, fusstext, zahlungsbedingungen, positionen, projektId, angenommenAm, lexwareId }]`.
+  - Position: `{ id, bezeichnung, beschreibung, grundH, puffer, pufferEinheit ('%' | 'h'), abrechnung ('stunden' | 'pauschal'), pauschalpreis }`. Geplant = Grund + Puffer. Betrag = Satz × geplant (bzw. × Grund, wenn „Puffer im Preis“ aus) oder Pauschalpreis. MwSt 19 %.
+  - **Zwei Puffer (Joachims Entscheidung):** Positions-Puffer = Zulagen aus der Angebotsplanung (Vorgabe 36 %, wie im Kalkulator 3 + 8 + 5 + 20 %). Beim Einplanen kommt der Planungspuffer 0–20 % als Projekt-Puffer obendrauf. 0 % ist erlaubt.
+  - `angebotAnnehmen()`: legt ein Projekt (Status Auftrag) mit den gewählten Positionen an, `sollH` = geplante Stunden, `angebotPositionId` und `preis` an der Projektposition, `angebotId` am Projekt, Meilenstein „Abgabe“ bei Deadline. Nur Pauschal-Positionen → Pauschalprojekt. Nie Samstage oder lange Tage. `annahmeZuruecknehmen()` nur, solange keine Zeit gebucht ist.
+- `js/ansichten/angebote.js`: `#/angebote` (Liste mit Kennzahlen und Filter), `#/angebote/<id>` (bearbeiten, speichert sofort – deshalb kein „Speichern“-Knopf), `#/angebote/<id>/auftrag` (Auftrag einplanen, grauer Hintergrund wie im Entwurf). Positionen bis 1180 px als Karten, am iPhone Summe und Aktion unten fest.
+- Noch offen: „PDF ansehen“ und „An Lexware Office übertragen“ (kommt mit der Lexware-Anbindung über GitHub, der Knopf ist bis dahin ausgegraut), Kunde aus Lexware-Kontakten, Kopf-/Fußtext-Vorlagen.
+- Beispieldaten: drei erfundene Angebote (Entwurf, versendet, abgelehnt).
 
 ## Zeitstopper (ersetzt Tyme)
 

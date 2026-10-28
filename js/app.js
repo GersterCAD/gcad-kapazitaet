@@ -8,6 +8,7 @@ import { uebersicht } from './ansichten/uebersicht.js';
 import { kalenderSeite, kalenderVergessen } from './ansichten/kalender.js';
 import { anfrageSeite, anfrageKopf, anfrageVergessen } from './ansichten/anfrage.js';
 import { projektliste } from './ansichten/projekte.js';
+import { angeboteListe, angebotSeite, angebotKopf, auftragSeite, auftragVergessen } from './ansichten/angebote.js';
 import { projektseite, projektKontext } from './ansichten/projekt.js';
 import { projektformular, formularKontext, formularVergessen } from './ansichten/projektformular.js';
 import * as zustand from './zustand.js';
@@ -18,11 +19,11 @@ import * as stoppuhr from './stoppuhr.js';
 import { kopfTimer, mobilTimer } from './ansichten/zeitstopper.js';
 
 // Fünf Bereiche nach Entwurf Index B (Navigation.dc.html), Einstellungen als Zahnrad in der Kopfzeile.
-// Abrechnung kommt dazu, sobald sie gebaut ist. Angebote enthält bis dahin „Anfrage prüfen“.
+// Abrechnung kommt dazu, sobald sie gebaut ist. Angebote enthält „Anfragen“ (Anfrage prüfen) und „Angebote“.
 const BEREICHE = [
   { id: 'uebersicht', name: 'Übersicht', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
   { id: 'projekte', name: 'Projekte', icon: 'M3 7h18v13H3zM8 7V4h8v3' },
-  { id: 'angebote', name: 'Angebote', href: '#/anfragen', icon: 'M14 3H6v18h12V7zM14 3v4h4M9 12h6M9 16h6' },
+  { id: 'angebote', name: 'Angebote', icon: 'M14 3H6v18h12V7zM14 3v4h4M9 12h6M9 16h6' },
   { id: 'kalender', name: 'Kalender', icon: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4' },
 ];
 const ZAHNRAD = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>';
@@ -52,6 +53,7 @@ const ANSICHTEN = {
     inhalt: projektformular(null),
   }),
   anfragen: () => ({ bereich: 'angebote', titel: 'Anfrage prüfen', ...anfrageKopf(null), voll: true, inhalt: anfrageSeite(null) }),
+  angebote: () => ({ bereich: 'angebote', kontext: 'Angebote', inhalt: angeboteListe() }),
   kalender: () => ({
     bereich: 'kalender',
     kontext: 'Kalender',
@@ -134,6 +136,11 @@ function ansichtFuer(pfad) {
   if (ANSICHTEN[pfad]) return ANSICHTEN[pfad]();
   const a = pfad.match(/^anfragen\/([^/]+)$/);
   if (a) return { bereich: 'angebote', titel: 'Anfrage', zurueck: '#/projekte', ...anfrageKopf(a[1]), voll: true, inhalt: anfrageSeite(a[1]) };
+  const an = pfad.match(/^angebote\/([^/]+)(\/auftrag)?$/);
+  if (an) {
+    if (an[2]) return { bereich: 'angebote', titel: 'Auftrag einplanen', zurueck: `#/angebote/${an[1]}`, kontext: 'Auftrag einplanen', grau: true, schmal: true, inhalt: auftragSeite(an[1]) };
+    return { bereich: 'angebote', ...angebotKopf(an[1]), inhalt: angebotSeite(an[1]) };
+  }
   const m = pfad.match(/^projekte\/([^/]+)(\/bearbeiten)?$/);
   if (m) {
     const p = zustand.aktuell().projekte.find((x) => x.id === m[1]);
@@ -158,7 +165,8 @@ function zeigen() {
         el('div', { class: 'hinweisband-text' }, ['Auf einem anderen Gerät wurde dasselbe geändert. ', el('a', { href: '#/einstellungen' }, 'Bitte entscheiden, welcher Stand gilt.')]),
       ])
     : null;
-  const inhalt = el('main', { class: `inhalt${ansicht.schmal ? ' schmal' : ''}${ansicht.voll ? ' voll' : ''}`, id: 'inhalt', tabindex: '-1' }, [band, ansicht.inhalt]);
+  document.body.classList.toggle('grau', !!ansicht.grau);
+  const inhalt = el('main', { class: `inhalt${ansicht.schmal ? ' schmal' : ''}${ansicht.voll ? ' voll' : ''}${ansicht.grau ? ' auftrag' : ''}`, id: 'inhalt', tabindex: '-1' }, [band, ansicht.inhalt]);
   app.replaceChildren(kopfzeile(ansicht), navigation(ansicht.bereich), inhalt, mobilTimer(pfad) ?? '');
   app.classList.toggle('mit-mobil-timer', !!app.querySelector('.mobil-timer'));
   // Nach dem Neuzeichnen den Fokus zurück auf denselben Knopf (wichtig für Tastatur und Vorlesen)
@@ -169,6 +177,7 @@ window.addEventListener('hashchange', () => {
   formularVergessen();
   anfrageVergessen(location.hash.replace(/^#\/?/, ''));
   kalenderVergessen();
+  auftragVergessen();
   zeigen();
   window.scrollTo(0, 0);
 });

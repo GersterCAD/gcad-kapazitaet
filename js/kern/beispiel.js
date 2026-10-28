@@ -99,6 +99,36 @@ export function beispielDaten() {
   );
   d.abwesenheiten.push({ id: neueId(), von: '2026-12-28', bis: '2027-01-01', art: 'urlaub' });
 
+  // Angebote wie im Entwurf Index B (Angebote.dc.html), Namen erfunden
+  d.kunden.push(
+    { id: neueId(), name: 'Café Rösterei', stundensatz: 75 },
+    { id: neueId(), name: 'Beispiel Bau GmbH', stundensatz: 72 },
+  );
+  const pos = (bezeichnung, beschreibung, grundH, puffer, extra = {}) => ({
+    id: neueId(), bezeichnung, beschreibung, grundH, puffer, pufferEinheit: '%', abrechnung: 'stunden', pauschalpreis: null, ...extra,
+  });
+  const angebot = (a) => ({ id: neueId(), stundensatz: null, pufferImPreis: true, kopftext: '', fusstext: '', zahlungsbedingungen: '', projektId: null, angenommenAm: null, lexwareId: null, ...a });
+  d.angebote.push(
+    angebot({
+      nummer: 'AN 26-031', datum: '2026-10-28', gueltigBis: '2026-11-27', kunde: 'Café Rösterei', projektname: 'Entwurfsplanung Café', art: 'Entwurf', status: 'entwurf',
+      positionen: [
+        pos('Bestandsaufnahme und Aufmaß', 'Aufmaß vor Ort, Bestandsplan als Grundlage', 6, 10),
+        pos('Konzept und Raumaufteilung', 'Zonen Theke, Rösterei, Gastraum · 2 Varianten', 14, 10),
+        pos('Entwurf Theke und Rückbuffet', 'Ansichten, Schnitte, Materialvorschlag', 20, 10),
+        pos('Visualisierung 3D', '3 Perspektiven', 10, 10, { abrechnung: 'pauschal', pauschalpreis: 850 }),
+        pos('Abstimmung und Änderungen', 'zwei Änderungsrunden', 6, 20),
+      ],
+    }),
+    angebot({
+      nummer: 'AN 26-030', datum: '2026-10-21', gueltigBis: '2026-11-04', kunde: 'Beispiel Bau GmbH', projektname: 'Ergänzung Werkplanung', art: 'Werkplanung', status: 'versendet',
+      positionen: [pos('Werkplanung Ergänzung', 'Zusätzliche Schränke Flur', 22, 36)],
+    }),
+    angebot({
+      nummer: 'AN 26-025', datum: '2026-09-22', gueltigBis: '2026-10-22', kunde: 'Schreinerei Beispiel', projektname: 'Konstruktion Empfangstheke', art: 'Konstruktion', status: 'abgelehnt',
+      stundensatz: 72, positionen: [pos('Konstruktion Empfangstheke', '', 16, 25)],
+    }),
+  );
+
   return d;
 }
 

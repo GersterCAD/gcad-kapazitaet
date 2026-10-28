@@ -51,6 +51,7 @@ export function leereDaten() {
     vorschlaegeUebernommen: [],
     timer: null,
     kunden: [],
+    angebote: [],
   };
 }
 
@@ -159,6 +160,25 @@ export function pruefeDaten(roh) {
     if (p.abrechnungsart && !['stunden', 'pauschal'].includes(p.abrechnungsart)) fehler.push(`Projekt ${p.name}: Abrechnungsart „${p.abrechnungsart}“ unbekannt.`);
     if (p.stundensatz != null) zahl(p.stundensatz, `Projekt ${p.name}: Stundensatz`, 0, 10000, fehler);
     if (p.pauschalpreis != null) zahl(p.pauschalpreis, `Projekt ${p.name}: Pauschalpreis`, 0, 10000000, fehler);
+  });
+  d.angebote.forEach((a, i) => {
+    const wo = `Angebot ${i + 1}${a?.nummer ? ` (${a.nummer})` : ''}`;
+    if (!a?.id) fehler.push(`${wo}: ID fehlt.`);
+    if (!['entwurf', 'versendet', 'angenommen', 'abgelehnt'].includes(a?.status)) fehler.push(`${wo}: Status „${a?.status}“ unbekannt.`);
+    datum(a?.datum, `${wo}: Datum`, fehler, true);
+    datum(a?.gueltigBis, `${wo}: gültig bis`, fehler, true);
+    if (a?.stundensatz != null) zahl(a.stundensatz, `${wo}: Stundensatz`, 0, 10000, fehler);
+    if (a && !Array.isArray(a.positionen)) a.positionen = [];
+    (a?.positionen ?? []).forEach((p, j) => {
+      const pw = `${wo}, Position ${j + 1}`;
+      if (!p?.id) fehler.push(`${pw}: ID fehlt.`);
+      zahl(p?.grundH, `${pw}: Grundstunden`, 0, 100000, fehler);
+      zahl(p?.puffer, `${pw}: Puffer`, 0, 100000, fehler);
+      if (!['%', 'h'].includes(p?.pufferEinheit)) fehler.push(`${pw}: Puffer-Einheit „${p?.pufferEinheit}“ unbekannt.`);
+      if (!['stunden', 'pauschal'].includes(p?.abrechnung)) fehler.push(`${pw}: Abrechnung „${p?.abrechnung}“ unbekannt.`);
+      if (p?.pauschalpreis != null) zahl(p.pauschalpreis, `${pw}: Pauschalpreis`, 0, 10000000, fehler);
+    });
+    if (a?.projektId && !projektIds.has(a.projektId)) a.projektId = null;
   });
   // Laufender Timer: ohne gültiges Projekt oder Startzeit wird er verworfen (kein Fehler)
   if (d.timer && (!projektIds.has(d.timer.projektId) || Number.isNaN(Date.parse(d.timer.start)))) d.timer = null;
