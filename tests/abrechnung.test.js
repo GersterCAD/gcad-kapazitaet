@@ -43,3 +43,21 @@ test('Einstellung wirkt, abgerechnete Einträge fehlen, Zeitraum', () => {
   assert.equal(offeneStunden(d, 'p'), 3.25);
   assert.equal(rechnungsZeilen(d, 'p', { bis: '2026-10-28', art: 'tag' }).length, 1);
 });
+
+test('Stundensatz: Auftrag vor Kunde; Beträge je Zeile; Pauschal mit effektivem Satz', async () => {
+  const { stundensatz, abrechnungUeberblick } = await import('../js/kern/abrechnung.js');
+  const d = daten();
+  d.projekte[0].kunde = 'Beispiel Bau GmbH';
+  d.kunden.push({ id: 'k', name: 'Beispiel Bau GmbH', stundensatz: 80 });
+  assert.deepEqual(stundensatz(d, d.projekte[0]), { satz: 80, quelle: 'kunde' });
+  assert.equal(rechnungsZeilen(d, 'p')[0].betrag, 260);          // 3,25 h × 80 €
+  d.projekte[0].stundensatz = 90;
+  assert.deepEqual(stundensatz(d, d.projekte[0]), { satz: 90, quelle: 'auftrag' });
+  assert.equal(abrechnungUeberblick(d, d.projekte[0]).offenBetrag, 562.5); // 6,25 h × 90 €
+  d.projekte[0].abrechnungsart = 'pauschal';
+  d.projekte[0].pauschalpreis = 1000;
+  const u = abrechnungUeberblick(d, d.projekte[0]);
+  assert.equal(u.art, 'pauschal');
+  assert.equal(u.effektiverSatz, 160);                            // 1000 € / 6,25 h
+  assert.equal(rechnungsZeilen(d, 'p')[0].betrag, null);
+});

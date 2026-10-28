@@ -12,7 +12,7 @@ import * as kalender from '../kalender.js';
 import * as github from '../github.js';
 import * as abgleich from '../abgleich.js';
 import { unterschiede } from '../kern/abgleich.js';
-import { ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN } from '../kern/abrechnung.js';
+import { ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN, euro } from '../kern/abrechnung.js';
 import { meilensteineExportieren, offeneMeilensteine } from './kalender.js';
 import { feiertageBW, feiertag } from '../kern/feiertage.js';
 import { abwesenheit } from '../kern/kapazitaet.js';
@@ -374,7 +374,39 @@ function abrechnungKarte(d) {
           wahlPille(x.name, x.id === art, () => setze((e) => { e.abrechnungZusammenfassen = x.id; }), { art: 'breit', fokus: `zusammen-${x.id}` }))),
       ]),
     ]),
+    kundenSaetze(d),
     el('p', { class: 'zeile-hinweis' }, 'Die Übergabe an Lexware Office folgt. Auf jeder Projektseite siehst du schon, welche Zeilen offen sind.'),
+  ]);
+}
+
+/** Stundensatz je Kunde: alle Kunden aus den Projekten, Satz direkt eintragen */
+function kundenSaetze(d) {
+  const namen = [...new Set([...d.projekte.map((p) => p.kunde?.trim()).filter(Boolean), ...(d.kunden ?? []).map((k) => k.name)])].sort((a, b) => a.localeCompare(b, 'de'));
+  return el('div', {}, [
+    el('div', { class: 'label mit-abstand-gross' }, 'Stundensatz je Kunde · netto'),
+    namen.length ? el('div', { class: 'mit-abstand' }, namen.map((name, i) => {
+      const k = (d.kunden ?? []).find((x) => x.name === name);
+      const auftraege = d.projekte.filter((p) => p.kunde?.trim() === name);
+      const eigene = auftraege.filter((p) => p.abrechnungsart === 'pauschal' || p.stundensatz > 0).length;
+      const feld = el('input', {
+        class: 'feld zahl satzfeld', type: 'number', min: '0', step: '0.01', inputmode: 'decimal', value: k?.stundensatz ?? '',
+        placeholder: '€/h', 'aria-label': `Stundensatz ${name} in Euro`, 'data-fokus': `satz-${i}`,
+        onchange: () => zustand.aendern((x) => {
+          x.kunden ??= [];
+          const v = feld.value === '' ? null : Math.round(Number(feld.value) * 100) / 100;
+          let e = x.kunden.find((y) => y.name === name);
+          if (!e) { e = { id: neueId(), name, stundensatz: null }; x.kunden.push(e); }
+          e.stundensatz = v > 0 ? v : null;
+        }),
+      });
+      return el('div', { class: 'zeile schmal' }, [
+        el('div', { class: 'fuellung' }, [
+          el('div', { class: 'zeile-titel' }, name),
+          el('div', { class: 'zeile-hinweis' }, `${auftraege.length} ${auftraege.length === 1 ? 'Auftrag' : 'Aufträge'}${eigene ? ` · ${eigene} mit eigenem Satz oder pauschal` : ''}${k?.stundensatz ? ` · ${euro(k.stundensatz)}/h` : ''}`),
+        ]),
+        feld,
+      ]);
+    })) : el('p', { class: 'zeile-hinweis' }, 'Noch keine Kunden. Sie erscheinen hier, sobald ein Projekt einen Kunden hat.'),
   ]);
 }
 

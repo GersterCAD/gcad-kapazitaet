@@ -15,6 +15,7 @@ export const BEREICHE = [
   { liste: 'abwesenheiten', name: 'Abwesenheit' },
   { liste: 'terminRegeln', name: 'Terminregel', schluessel: 'uid' },
   { liste: 'vorschlaegeUebernommen', name: 'Vorschlag' },
+  { liste: 'kunden', name: 'Kunde' },
 ];
 
 const gleich = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -103,6 +104,7 @@ function titel(liste, x, lokal, entfernt) {
     case 'blockzeiten': return x.titel;
     case 'abwesenheiten': return `${x.art === 'krank' ? 'Krank' : 'Urlaub'} ${x.von} – ${x.bis}`;
     case 'vorschlaegeUebernommen': return x.titel ?? 'Vorschlag';
+    case 'kunden': return x.name;
     default: return x.uid ?? x.id ?? '';
   }
 }
@@ -111,7 +113,7 @@ const FELD_NAME = {
   name: 'Name', nr: 'Nummer', kunde: 'Kunde', art: 'Art', status: 'Status', schaetzungH: 'Schätzung', puffer: 'Puffer',
   start: 'Start', deadline: 'Deadline', prioritaet: 'Priorität', positionen: 'Positionen', datum: 'Datum', titel: 'Titel',
   typ: 'Typ', erledigt: 'erledigt', erinnerungTage: 'Erinnerung', stunden: 'Stunden', positionNr: 'Position', notiz: 'Notiz',
-  von: 'von', bis: 'bis', stundenProWoche: 'Stunden pro Woche', wochentag: 'Tage', kuerzbar: 'kürzbar', zaehltH: 'zählt', projektId: 'Projekt',
+  von: 'von', bis: 'bis', stundenProWoche: 'Stunden pro Woche', wochentag: 'Tage', kuerzbar: 'kürzbar', zaehltH: 'zählt', projektId: 'Projekt', stundensatz: 'Stundensatz', pauschalpreis: 'Pauschalpreis', abrechnungsart: 'Abrechnung',
   regeltagH: 'Regeltag', timerRundung: 'Timer-Rundung', maxTagH: 'Längster Tag', warnWochen: 'Warngrenze', standardPuffer: 'Standard-Puffer', samstagErlaubt: 'Samstag', kalender: 'Kalender',
 };
 

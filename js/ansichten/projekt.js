@@ -11,7 +11,7 @@ import { loeschKnopf } from './einstellungen.js';
 import { meilensteineExportieren } from './kalender.js';
 import * as stoppuhr from '../stoppuhr.js';
 import { laufzeit, dauerText } from '../kern/timer.js';
-import { rechnungsZeilen, ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN } from '../kern/abrechnung.js';
+import { rechnungsZeilen, ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN, abrechnungUeberblick, euro } from '../kern/abrechnung.js';
 
 const PLAN_CHIP = { imPlan: ['gruen', 'im Plan'], knapp: ['gelb', 'knapp'], zuSpaet: ['rot', 'zu spät'] };
 
@@ -433,17 +433,33 @@ function timerBlock(d, p, s) {
 
 function abrechnungKarte(d, p) {
   const zeilen = rechnungsZeilen(d, p.id);
-  if (!zeilen.length) return null;
-  const summe = zeilen.reduce((a, z) => a + z.stunden, 0);
+  const u = abrechnungUeberblick(d, p);
+  if (!zeilen.length && u.art !== 'pauschal') return null;
   const art = ZUSAMMENFASSEN.find((x) => x.id === (d.einstellungen.abrechnungZusammenfassen ?? STANDARD_ZUSAMMENFASSEN));
   const gezeigt = zeilen.slice(-5).reverse();
+  const summeH = zeilen.reduce((a, z) => a + z.stunden, 0);
+
+  let kopf, unter;
+  if (u.art === 'pauschal') {
+    kopf = u.pauschalpreis ? euro(u.pauschalpreis) : 'Pauschal';
+    unter = u.pauschalpreis
+      ? (u.effektiverSatz ? `Pauschal · bisher ${zahlText(u.istH, 2)} h, also ${euro(u.effektiverSatz)} je Stunde` : 'Pauschal · noch keine Stunden gebucht')
+      : 'Pauschal · Preis noch nicht eingetragen';
+  } else {
+    kopf = u.offenBetrag != null ? euro(u.offenBetrag) : `${zahlText(summeH, 2)} h`;
+    unter = u.satz
+      ? `${zahlText(summeH, 2)} h × ${euro(u.satz)}${u.quelle === 'kunde' ? ' (Satz des Kunden)' : ' (Satz dieses Auftrags)'}`
+      : ['Kein Stundensatz · ', el('a', { href: `#/projekte/${p.id}/bearbeiten` }, 'eintragen')];
+  }
+
   return el('section', { class: 'karte', 'aria-labelledby': 'h-abr-p' }, [
-    el('h2', { id: 'h-abr-p', class: 'label' }, 'Offen zur Abrechnung'),
-    el('div', { class: 'kennzahl zahl mit-abstand-mittel' }, `${zahlText(summe, 2)} h`),
-    el('p', { class: 'kartentext ohne-abstand' }, [`${zeilen.length} ${zeilen.length === 1 ? 'Rechnungszeile' : 'Rechnungszeilen'}, ${art.name} zusammengefasst · `, el('a', { href: '#/einstellungen' }, 'ändern')]),
+    el('h2', { id: 'h-abr-p', class: 'label' }, u.art === 'pauschal' ? 'Abrechnung' : 'Offen zur Abrechnung'),
+    el('div', { class: 'kennzahl zahl mit-abstand-mittel' }, kopf),
+    el('p', { class: 'kartentext ohne-abstand' }, unter),
+    zeilen.length ? el('p', { class: 'zeile-hinweis' }, [`${zeilen.length} ${zeilen.length === 1 ? 'Zeile' : 'Zeilen'}, ${art.name} zusammengefasst · `, el('a', { href: '#/einstellungen' }, 'ändern')]) : null,
     el('div', { class: 'mit-abstand-mittel' }, gezeigt.map((z) => el('div', { class: 'buchungszeile oben' }, [
       el('span', { class: 'fuellung zeile-text' }, z.text),
-      el('span', { class: 'fett-mittel zahl' }, `${zahlText(z.stunden, 2)} h`),
+      el('span', { class: 'fett-mittel zahl rechts' }, [`${zahlText(z.stunden, 2)} h`, z.betrag != null ? el('span', { class: 'block sekundaer' }, euro(z.betrag)) : null]),
     ]))),
     zeilen.length > gezeigt.length ? el('div', { class: 'zeile-hinweis' }, `… und ${zeilen.length - gezeigt.length} ältere`) : null,
   ]);

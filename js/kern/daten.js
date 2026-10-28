@@ -50,6 +50,7 @@ export function leereDaten() {
     terminRegeln: [],
     vorschlaegeUebernommen: [],
     timer: null,
+    kunden: [],
   };
 }
 
@@ -148,6 +149,16 @@ export function pruefeDaten(roh) {
     datum(z?.datum, `${wo}: Datum`, fehler);
     zahl(z?.stunden, `${wo}: Stunden`, 0, 24, fehler);
     if ((z?.von && !ZEIT.test(z.von)) || (z?.bis && !ZEIT.test(z.bis))) fehler.push(`${wo}: Uhrzeit ungültig (Form 08:00).`);
+  });
+  d.kunden.forEach((k, i) => {
+    const wo = `Kunde ${i + 1}${k?.name ? ` (${k.name})` : ''}`;
+    if (!k?.id || !k?.name) fehler.push(`${wo}: ID oder Name fehlt.`);
+    if (k?.stundensatz != null) zahl(k.stundensatz, `${wo}: Stundensatz`, 0, 10000, fehler);
+  });
+  d.projekte.forEach((p) => {
+    if (p.abrechnungsart && !['stunden', 'pauschal'].includes(p.abrechnungsart)) fehler.push(`Projekt ${p.name}: Abrechnungsart „${p.abrechnungsart}“ unbekannt.`);
+    if (p.stundensatz != null) zahl(p.stundensatz, `Projekt ${p.name}: Stundensatz`, 0, 10000, fehler);
+    if (p.pauschalpreis != null) zahl(p.pauschalpreis, `Projekt ${p.name}: Pauschalpreis`, 0, 10000000, fehler);
   });
   // Laufender Timer: ohne gültiges Projekt oder Startzeit wird er verworfen (kein Fehler)
   if (d.timer && (!projektIds.has(d.timer.projektId) || Number.isNaN(Date.parse(d.timer.start)))) d.timer = null;

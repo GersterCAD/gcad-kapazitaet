@@ -5,6 +5,7 @@ import { el, wahlPille, feldGruppe, zahlText, kreuzIcon, plusIcon } from '../ui.
 import * as zustand from '../zustand.js';
 import { STATUS, STATUS_NAME, STATUS_FEST, soll, neueId } from '../kern/daten.js';
 import { lernwert } from '../kern/lernwert.js';
+import { ABRECHNUNGSART, kundeVon, euro } from '../kern/abrechnung.js';
 import { empfohlenerPuffer } from './projekt.js';
 import { loeschKnopf } from './einstellungen.js';
 
@@ -23,6 +24,7 @@ function neuerEntwurf(d, p) {
     prioritaet: p?.prioritaet ?? 2, schaetzungH: p?.schaetzungH ?? 0,
     puffer: p?.puffer ?? d.einstellungen.standardPuffer,
     positionen: (p?.positionen ?? []).map((x) => ({ ...x, alt: x.nr, sollH: x.sollH ?? 0 })),
+    abrechnungsart: p?.abrechnungsart ?? 'stunden', stundensatz: p?.stundensatz ?? '', pauschalpreis: p?.pauschalpreis ?? '',
     fehler: [],
   };
 }
@@ -183,9 +185,32 @@ export function projektformular(id = null) {
       el('div', { class: 'label' }, p ? 'Projekt bearbeiten' : 'Projekt anlegen'),
       el('h1', { class: 'mit-abstand' }, p ? p.name : 'Neues Projekt'),
     ]),
-    el('div', { class: 'raster-karten' }, [karteProjekt, karteAufwand, kartePositionen]),
+    el('div', { class: 'raster-karten' }, [karteProjekt, karteAufwand, abrechnungKarte(d, f), kartePositionen]),
     fehler,
     knoepfe,
+  ]);
+}
+
+// ----- Karte Abrechnung: nach Stunden (Satz vom Kunden oder eigener) oder Pauschalpreis
+function abrechnungKarte(d, f) {
+  const kunde = kundeVon(d, { kunde: f.kunde });
+  const zahlFeld = (feld, attrs) => {
+    const i = el('input', { class: 'feld zahl', type: 'number', min: '0', step: '0.01', inputmode: 'decimal', value: String(f[feld] ?? ''), oninput: () => { f[feld] = i.value; }, ...attrs });
+    return i;
+  };
+  return el('section', { class: 'karte', 'aria-labelledby': 'h-pabr' }, [
+    el('h2', { id: 'h-pabr' }, 'Abrechnung'),
+    el('div', { class: 'stapel gross' }, [
+      el('div', { class: 'umschalter', role: 'group', 'aria-label': 'Abrechnungsart' }, ABRECHNUNGSART.map((a) =>
+        el('button', { type: 'button', 'aria-pressed': String(f.abrechnungsart === a.id), 'data-fokus': `pf-abr-${a.id}`, onclick: () => { f.abrechnungsart = a.id; zustand.neuZeichnen(); } }, a.name))),
+      f.abrechnungsart === 'pauschal'
+        ? feldGruppe('Pauschalpreis in € (netto)', zahlFeld('pauschalpreis', { placeholder: 'z. B. 4800', step: '1' }),
+            'Die Stunden zählen weiter für die Planung. Die App zeigt dir, was eine Stunde dabei wert war.')
+        : feldGruppe('Stundensatz in € (netto)', zahlFeld('stundensatz', { placeholder: kunde?.stundensatz ? `vom Kunden: ${zahlText(kunde.stundensatz, 2)}` : 'z. B. 85' }),
+            kunde?.stundensatz
+              ? `Leer lassen = Satz des Kunden (${euro(kunde.stundensatz)}). Nur ausfüllen, wenn dieser Auftrag anders abgerechnet wird.`
+              : 'Den Satz je Kunde trägst du in den Einstellungen unter Abrechnung ein. Hier nur, wenn dieser Auftrag anders abgerechnet wird.'),
+    ]),
   ]);
 }
 
@@ -199,6 +224,8 @@ function pruefen(f) {
   if (nrs.some((x) => !x)) fehler.push('Jede Position braucht eine Nummer.');
   if (new Set(nrs).size !== nrs.length) fehler.push('Positionsnummern doppelt.');
   if (f.positionen.some((x) => !(Number(x.sollH) >= 0))) fehler.push('Soll-Stunden einer Position sind ungültig.');
+  if (f.stundensatz !== '' && !(Number(f.stundensatz) >= 0)) fehler.push('Der Stundensatz ist keine gültige Zahl.');
+  if (f.pauschalpreis !== '' && !(Number(f.pauschalpreis) >= 0)) fehler.push('Der Pauschalpreis ist keine gültige Zahl.');
   return fehler;
 }
 
@@ -212,6 +239,9 @@ async function speichern(p) {
   const werte = {
     nr: f.nr.trim(), name: f.name.trim(), kunde: f.kunde.trim(), art: f.art.trim(), status: f.status,
     start: f.start || '', deadline: f.deadline || '', prioritaet: f.prioritaet, schaetzungH, puffer: f.puffer, positionen,
+    abrechnungsart: f.abrechnungsart,
+    stundensatz: f.abrechnungsart === 'stunden' && f.stundensatz !== '' && Number(f.stundensatz) > 0 ? Math.round(Number(f.stundensatz) * 100) / 100 : null,
+    pauschalpreis: f.abrechnungsart === 'pauschal' && f.pauschalpreis !== '' ? Math.round(Number(f.pauschalpreis) * 100) / 100 : null,
   };
   const id = p?.id ?? neueId();
 

@@ -2,6 +2,7 @@
 // Standard: je Tag und Projekt eine Zeile, damit viele kleine Einträge (0,5 h + 0,75 h + 2 h) nicht kleinlich wirken.
 
 import { ausText, tagLang } from './datum.js';
+import { ist } from './daten.js';
 
 export const ZUSAMMENFASSEN = [
   { id: 'tag', name: 'je Tag', text: 'Eine Zeile je Tag und Projekt' },
@@ -12,13 +13,49 @@ export const STANDARD_ZUSAMMENFASSEN = 'tag';
 
 const runde = (h) => Math.round(h * 100) / 100;
 
+export const ABRECHNUNGSART = [
+  { id: 'stunden', name: 'nach Stunden' },
+  { id: 'pauschal', name: 'Pauschal' },
+];
+
+/** Kunde zu einem Projekt (über den Namen im Projekt) */
+export const kundeVon = (daten, p) => (p?.kunde ? (daten.kunden ?? []).find((k) => k.name === p.kunde.trim()) ?? null : null);
+
+/** Stundensatz: am Auftrag eingetragen, sonst vom Kunden, sonst null */
+export function stundensatz(daten, p) {
+  if (p?.stundensatz > 0) return { satz: p.stundensatz, quelle: 'auftrag' };
+  const k = kundeVon(daten, p);
+  if (k?.stundensatz > 0) return { satz: k.stundensatz, quelle: 'kunde' };
+  return { satz: null, quelle: null };
+}
+
+/**
+ * Überblick für ein Projekt.
+ * Stunden: { art, satz, quelle, offenH, offenBetrag }
+ * Pauschal: { art, pauschalpreis, istH, effektiverSatz } – was eine Stunde bei diesem Pauschalpreis bisher wert war
+ */
+export function abrechnungUeberblick(daten, p) {
+  if (p.abrechnungsart === 'pauschal') {
+    const istH = ist(daten, p.id);
+    return { art: 'pauschal', pauschalpreis: p.pauschalpreis ?? null, istH: runde(istH), effektiverSatz: p.pauschalpreis > 0 && istH > 0 ? runde(p.pauschalpreis / istH) : null };
+  }
+  const { satz, quelle } = stundensatz(daten, p);
+  const offenH = offeneStunden(daten, p.id);
+  return { art: 'stunden', satz, quelle, offenH, offenBetrag: satz ? runde(offenH * satz) : null };
+}
+
+/** Betrag deutsch: „1.234,50 €“ */
+export const euro = (x) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(x);
+
 /**
  * Rechnungszeilen eines Projekts: noch nicht abgerechnete Zeiteinträge, optional im Zeitraum [von, bis].
- * Ergebnis: [{ datum, stunden, text, positionen: [nr], eintraege: [id] }], nach Datum sortiert.
+ * Ergebnis: [{ datum, stunden, satz, betrag, text, positionen: [nr], eintraege: [id] }], nach Datum sortiert.
+ * Bei Pauschal-Aufträgen ohne Satz und Betrag (die Stunden sind dann nur zur Information).
  */
 export function rechnungsZeilen(daten, projektId, { von, bis, art } = {}) {
   art ??= daten.einstellungen.abrechnungZusammenfassen ?? STANDARD_ZUSAMMENFASSEN;
   const p = daten.projekte.find((x) => x.id === projektId);
+  const satz = p?.abrechnungsart === 'pauschal' ? null : stundensatz(daten, p).satz;
   const posName = (nr) => {
     const pos = p?.positionen.find((x) => x.nr === nr);
     return pos ? `Pos. ${pos.nr} ${pos.bezeichnung}`.trim() : nr ? `Pos. ${nr}` : '';
@@ -46,7 +83,8 @@ export function rechnungsZeilen(daten, projektId, { von, bis, art } = {}) {
     if (pos.length) teile.push(pos.join(', '));
     if (art === 'einzeln' && g.zeiten.length) teile.push(g.zeiten.join(', '));
     if (g.notizen.length) teile.push(g.notizen.join('; '));
-    return { datum: g.datum, stunden: runde(g.stunden), text: teile.join(' · '), positionen: g.positionen, eintraege: g.eintraege };
+    const stunden = runde(g.stunden);
+    return { datum: g.datum, stunden, satz, betrag: satz ? runde(stunden * satz) : null, text: teile.join(' · '), positionen: g.positionen, eintraege: g.eintraege };
   });
 }
 
