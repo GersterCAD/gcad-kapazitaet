@@ -9,6 +9,7 @@ import { neueId } from './daten.js';
 import { ausText, tagKurz } from './datum.js';
 import { rechnungsZeilen, stundensatz, offen, kundeVon } from './abrechnung.js';
 import { MWST } from './angebot.js';
+import { nachStundenOffen } from './nachtrag.js';
 
 export const RECHNUNG_ART = [
   { id: 'stunden', name: 'nach Stunden' },
@@ -65,6 +66,10 @@ export function rechnungBerechnen(daten, projektId, opts = {}) {
       zeilen = pos.length
         ? pos.map((x) => ({ titel: `Pos. ${x.nr} ${x.bezeichnung}`, beschreibung: '', menge: 1, einheit: 'Pauschal', preis: x.preis }))
         : [{ titel: p?.name ?? 'Pauschal', beschreibung: 'Pauschal laut Angebot', menge: 1, einheit: 'Pauschal', preis: p?.pauschalpreis ?? 0 }];
+      // Nachträge und Regie ohne eigenen Preis: nach Stunden
+      for (const x of nachStundenOffen(daten, projektId)) {
+        zeilen.push({ titel: `Pos. ${x.nr} ${x.bezeichnung}`, beschreibung: x.typ === 'regie' ? 'Regie nach Aufwand' : 'Nachtrag nach Aufwand', menge: x.stunden, einheit: 'Stunden', preis: satz ?? 0 });
+      }
       for (const r of abschlaege(daten, projektId)) {
         zeilen.push({ titel: `abzüglich ${r.titel ?? 'Abschlag'}`, beschreibung: `vom ${tm(r.erstellt)}`, menge: 1, einheit: 'Pauschal', preis: -r.netto });
       }
@@ -144,9 +149,12 @@ export function offenUebersicht(daten, heute) {
     const eintraege = daten.zeiteintraege.filter((z) => z.projektId === p.id && offen(z));
     const aeltester = eintraege.map((z) => z.datum).sort()[0] ?? null;
     if (p.abrechnungsart === 'pauschal') {
-      const offenBetrag = runde2((p.pauschalpreis ?? 0) - pauschalBerechnet(daten, p.id));
-      if (offenBetrag <= 0.005) continue;
-      zeilen.push({ projekt: p, art: 'pauschal', offenH: null, offenBetrag, seitTagen: aeltester ? tage(aeltester, heute) : null, aelter: 0, abgeschlossen: p.status === 'abgeschlossen' });
+      const nach = nachStundenOffen(daten, p.id);
+      const nachH = runde2(nach.reduce((s, x) => s + x.stunden, 0));
+      const { satz } = stundensatz(daten, p);
+      const offenBetrag = runde2((p.pauschalpreis ?? 0) - pauschalBerechnet(daten, p.id) + nachH * (satz ?? 0));
+      if (offenBetrag <= 0.005 && !nachH) continue;
+      zeilen.push({ projekt: p, art: 'pauschal', offenH: nachH || null, nachtragH: nachH, offenBetrag, seitTagen: aeltester ? tage(aeltester, heute) : null, aelter: 0, abgeschlossen: p.status === 'abgeschlossen' });
       continue;
     }
     if (!eintraege.length) continue;

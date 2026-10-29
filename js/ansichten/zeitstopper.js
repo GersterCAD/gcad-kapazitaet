@@ -7,6 +7,7 @@ import * as stoppuhr from '../stoppuhr.js';
 import { laufzeit, dauerText, dauerKurz, dauerLang, vergessen, endeVorschlag, stundenBis } from '../kern/timer.js';
 import { alsText, ausText, plusTage, tagKurz } from '../kern/datum.js';
 import { abrechnungUeberblick } from '../kern/abrechnung.js';
+import { nachtraege } from '../kern/nachtrag.js';
 
 const zwei = (n) => String(n).padStart(2, '0');
 const uhr = (d) => `${zwei(d.getHours())}:${zwei(d.getMinutes())}`;
@@ -120,11 +121,12 @@ export function zuletztText(z) {
 // ---------- Karte auf der Projektseite ----------
 
 // Zustand, der beim Neuzeichnen erhalten bleibt
-let karte = { projektId: null, wechseln: false, ende: null };
+let karte = { projektId: null, wechseln: false, ende: null, nachtrag: false, ntNr: null, ntText: '' };
+const ntZu = () => { karte.nachtrag = false; karte.ntNr = null; karte.ntText = ''; };
 
 /** s.pos = gewählte Position der Projektseite (wird mit der manuellen Buchung geteilt) */
 export function timerKarte(d, p, s) {
-  if (karte.projektId !== p.id) karte = { projektId: p.id, wechseln: false, ende: null };
+  if (karte.projektId !== p.id) karte = { projektId: p.id, wechseln: false, ende: null, nachtrag: false, ntNr: null, ntText: '' };
   const t = d.timer;
   const hier = t && t.projektId === p.id;
   const pos = (nr) => p.positionen.find((x) => x.nr === nr);
@@ -156,10 +158,22 @@ export function timerKarte(d, p, s) {
           }, [stoppQuadrat(), 'Stoppen']),
           p.positionen.length > 1 ? el('button', {
             type: 'button', class: 'knopf-timer rand', 'aria-expanded': String(karte.wechseln), 'data-fokus': 'timer-wechseln',
-            onclick: () => { karte.wechseln = !karte.wechseln; zustand.neuZeichnen(); },
+            onclick: () => { karte.wechseln = !karte.wechseln; karte.nachtrag = false; zustand.neuZeichnen(); },
           }, 'Position wechseln') : null,
+          p0?.typ === 'nachtrag' ? null : el('button', {
+            type: 'button', class: 'knopf-timer rand', 'aria-expanded': String(karte.nachtrag), 'data-fokus': 'timer-nachtrag',
+            onclick: () => { karte.nachtrag = !karte.nachtrag; karte.wechseln = false; zustand.neuZeichnen(); },
+          }, 'Nachtrag'),
         ]),
       ]),
+      karte.nachtrag ? nachtragBereich(p, {
+        dunkel: true,
+        frage: 'Der Kunde hat etwas geändert? Dann läuft die Zeit auf einen Nachtrag. Ohne Preis wird er nach Stunden abgerechnet.',
+        knoepfe: (wahl) => [
+          el('button', { type: 'button', class: 'knopf-timer hell', 'data-fokus': 'nt-ab-jetzt', onclick: async () => { const nr = await stoppuhr.nachtragLaufend(wahl()); ntZu(); s.pos = nr; zustand.neuZeichnen(); } }, 'Ab jetzt'),
+          el('button', { type: 'button', class: 'knopf-timer rand', 'data-fokus': 'nt-seit-start', onclick: async () => { const nr = await stoppuhr.nachtragLaufend(wahl(), { seitStart: true }); ntZu(); s.pos = nr; zustand.neuZeichnen(); } }, `Seit ${uhr(new Date(t.start))}`),
+        ],
+      }) : null,
       karte.wechseln ? el('div', { class: 'feldgruppe' }, [
         el('span', { class: 'feld-label', id: 'l-twechsel' }, 'Die Zeit bis jetzt wird gebucht, dann läuft der Timer auf der neuen Position weiter.'),
         el('div', { class: 'wahlreihe', role: 'group', 'aria-labelledby': 'l-twechsel' }, p.positionen.map((x) => el('button', {
@@ -183,9 +197,13 @@ export function timerKarte(d, p, s) {
       el('div', { class: 'timerkarte-reihe' }, [
         el('div', { class: 'timerkarte-links', role: 'status' }, e.length ? [
           el('span', { class: 'chip gruen gross' }, [hakenIcon(12), `Gebucht: ${zahlText(summe, 2)} h (${e[0].von}–${e[e.length - 1].bis})`]),
-          el('div', { class: 'zeile-hinweis' }, `${e[0].positionNr ? `Pos. ${e[0].positionNr} · ` : ''}${pauschal ? 'zählt jetzt zum Ist' : 'steht jetzt unter „Offen zur Abrechnung“'}`),
+          el('div', { class: 'zeile-hinweis' }, `${e[0].positionNr ? `Pos. ${e[0].positionNr} · ` : ''}${pauschal && pos(e[0].positionNr)?.typ !== 'nachtrag' ? 'zählt jetzt zum Ist' : 'steht jetzt unter „Offen zur Abrechnung“'}`),
         ] : [el('div', { class: 'zeile-text' }, 'Unter einer Minute, nichts gebucht.')]),
         el('div', { class: 'knopfreihe eng' }, [
+          e.length && pos(e[0].positionNr)?.typ !== 'nachtrag' ? el('button', {
+            type: 'button', class: 'pille gross', 'aria-expanded': String(karte.nachtrag), 'data-fokus': 'timer-war-nachtrag',
+            onclick: () => { karte.nachtrag = !karte.nachtrag; zustand.neuZeichnen(); },
+          }, 'War Nachtrag') : null,
           el('button', { type: 'button', class: 'pille gross', 'data-fokus': 'timer-zurueck', onclick: () => stoppuhr.rueckgaengig() }, e.length ? 'Rückgängig' : 'Weiterlaufen lassen'),
           el('button', {
             type: 'button', class: 'pille gross haupt', 'data-fokus': 'timer-neu',
@@ -193,6 +211,13 @@ export function timerKarte(d, p, s) {
           }, 'Neu starten'),
         ]),
       ]),
+      karte.nachtrag && e.length ? nachtragBereich(p, {
+        frage: `Die ${zahlText(summe, 2)} h auf einen Nachtrag umbuchen. Ohne Preis wird er nach Stunden abgerechnet.`,
+        knoepfe: (wahl) => [el('button', {
+          type: 'button', class: 'pille gross haupt', 'data-fokus': 'nt-umbuchen',
+          onclick: async () => { const nr = await stoppuhr.nachtragUmbuchen(p.id, wahl()); ntZu(); s.pos = nr; zustand.neuZeichnen(); },
+        }, 'Umbuchen')],
+      }) : null,
     ]);
   }
 
@@ -205,15 +230,47 @@ export function timerKarte(d, p, s) {
       el('div', { class: 'timerkarte-links' }, [
         p.positionen.length ? el('div', { class: 'wahlreihe', role: 'group', 'aria-label': 'Position' }, p.positionen.map((x) => el('button', {
           type: 'button', class: 'pospille', 'aria-pressed': String(x.nr === s.pos), 'aria-label': `Pos. ${x.nr} ${x.bezeichnung}`, 'data-fokus': `tpos-${x.nr}`,
-          onclick: () => { s.pos = x.nr; zustand.neuZeichnen(); },
-        }, x.nr))) : null,
+          onclick: () => { s.pos = x.nr; ntZu(); zustand.neuZeichnen(); },
+        }, x.nr)).concat(el('button', {
+          type: 'button', class: 'pospille', 'aria-pressed': String(karte.nachtrag), 'data-fokus': 'tpos-nachtrag', 'aria-label': 'Nachtrag starten',
+          onclick: () => { karte.nachtrag = !karte.nachtrag; zustand.neuZeichnen(); },
+        }, '+ Nachtrag'))) : null,
         p0 ? el('div', { class: 'zeile-text' }, `Pos. ${p0.nr} · ${p0.bezeichnung}`) : el('div', { class: 'zeile-text' }, 'Projekt ohne Positionen'),
         anderes ? el('div', { class: 'zeile-hinweis' }, [
           'Gerade läuft ', el('a', { href: `#/projekte/${anderes.id}` }, anderes.name), ' (', el('span', { class: 'zahl', 'data-timer-lauf': 'kurz' }, dauerKurz(laufzeit(t))), '). Starten bucht die Zeit dort.',
         ]) : null,
       ]),
-      el('button', { type: 'button', class: 'knopf-timer haupt', 'data-fokus': 'timer-start', onclick: () => stoppuhr.starten(p.id, s.pos) }, [playIcon(), 'Timer starten']),
+      karte.nachtrag ? null : el('button', { type: 'button', class: 'knopf-timer haupt', 'data-fokus': 'timer-start', onclick: () => stoppuhr.starten(p.id, s.pos) }, [playIcon(), 'Timer starten']),
     ]),
+    karte.nachtrag ? nachtragBereich(p, {
+      frage: 'Der Kunde hat etwas geändert? Starte den Timer direkt auf einem Nachtrag. Ohne Preis wird er nach Stunden abgerechnet.',
+      knoepfe: (wahl) => [
+        el('button', { type: 'button', class: 'knopf-timer haupt', 'data-fokus': 'nt-starten', onclick: async () => { const nr = await stoppuhr.nachtragStarten(p.id, wahl()); ntZu(); s.pos = nr; zustand.neuZeichnen(); } }, [playIcon(), 'Nachtrag starten']),
+        el('button', { type: 'button', class: 'pille gross', 'data-fokus': 'nt-abbrechen', onclick: () => { ntZu(); zustand.neuZeichnen(); } }, 'Abbrechen'),
+      ],
+    }) : null,
+  ]);
+}
+
+// Nachtrag wählen: vorhandenen antippen oder neuen beschreiben. knoepfe(wahl) bekommt eine Funktion, die die Wahl liefert.
+function nachtragBereich(p, { frage, knoepfe, dunkel = false }) {
+  const liste = nachtraege(p);
+  const text = el('input', {
+    id: 't-nt', class: `feld${dunkel ? ' dunkel' : ''}`, type: 'text', value: karte.ntText, placeholder: 'Was hat der Kunde geändert?', 'data-fokus': 'nt-text',
+    oninput: () => { karte.ntText = text.value; if (karte.ntNr) { karte.ntNr = null; zustand.neuZeichnen(); } },
+  });
+  const wahl = () => (karte.ntNr ? { nr: karte.ntNr } : { text: text.value });
+  return el('div', { class: 'feldgruppe nachtrag-wahl' }, [
+    el('span', { class: 'feld-label', id: 'l-nt' }, frage),
+    liste.length ? el('div', { class: 'wahlreihe', role: 'group', 'aria-labelledby': 'l-nt' }, liste.map((x) => el('button', {
+      type: 'button', class: `pospille${dunkel ? ' dunkel' : ''}`, 'aria-pressed': String(karte.ntNr === x.nr), 'aria-label': `${x.nr} ${x.bezeichnung}`, 'data-fokus': `nt-${x.nr}`,
+      title: x.bezeichnung,
+      onclick: () => { karte.ntNr = karte.ntNr === x.nr ? null : x.nr; zustand.neuZeichnen(); },
+    }, x.nr))) : null,
+    karte.ntNr
+      ? el('div', { class: 'zeile-text' }, `${karte.ntNr} · ${liste.find((x) => x.nr === karte.ntNr)?.bezeichnung ?? ''}`)
+      : el('div', {}, [el('label', { class: 'feld-label', for: 't-nt' }, liste.length ? 'oder neuer Nachtrag' : 'Neuer Nachtrag'), text]),
+    el('div', { class: 'knopfreihe eng' }, knoepfe(wahl)),
   ]);
 }
 

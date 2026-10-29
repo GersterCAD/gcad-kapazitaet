@@ -291,6 +291,18 @@ h2.label { font-size: 11px; font-weight: 500; letter-spacing: 0.12em; line-heigh
 .termin-wann { width: 72px; flex: none; font-size: 12px; font-weight: 500; }
 .termin-was { min-width: 0; }
 .termin-meta { font-size: 11px; color: var(--text-2); }
+.terminzeile[href] { color: inherit; text-decoration: none; align-items: center; }
+.terminzeile[href]:hover .zeile-text { color: var(--stahl); }
+.terminzeile > .chip { flex: none; }
+.terminzeile > .chip:last-child { margin-left: auto; }
+
+/* Deine Woche (Übersicht): Wochenstart / Wochenabschluss */
+.woche-karte { display: flex; flex-direction: column; gap: 16px; }
+.woche-karte h2 { margin: 4px 0 0; }
+.woche-raster { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 8px 24px; }
+.woche-block h3 { margin: 0; }
+.woche-block .terminzeile:last-child { border-bottom: 0; }
+.woche-zu { align-items: center; }
 
 .plan-zeile { display: flex; align-items: center; min-height: 64px; border-bottom: 1px solid var(--leiste); }
 .plan-zeile.plan-kopf { min-height: 0; border-bottom: 0; }
@@ -482,6 +494,9 @@ a.kopf-status:hover { color: var(--text); }
 .knopf-timer.breit { flex: 1; height: 44px; font-size: 13px; }
 .feld.dunkel { border-color: #3A3A3C; background: transparent; color: var(--weiss); }
 .feld.dunkel::placeholder { color: var(--text-2); }
+.nachtrag-wahl { display: flex; flex-direction: column; gap: 12px; padding-top: 16px; border-top: 1px solid var(--linie); }
+.timerkarte.laeuft .nachtrag-wahl { border-color: #3A3A3C; }
+.timerkarte.laeuft .zeile-text { color: var(--weiss); }
 .feld.uhrzeit { width: auto; height: 36px; padding: 0 12px; font-size: 13px; }
 .feld.uhrzeit.gewaehlt { border-color: var(--text); }
 .chip.gross { display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; font-size: 13px; padding: 6px 14px 6px 10px; }

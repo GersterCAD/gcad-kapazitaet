@@ -98,7 +98,7 @@ export function abrechnungOffen() {
             el('span', { class: 'farbstreifen schmal', 'aria-hidden': 'true', style: p.farbe ? `background:${p.farbe}` : null }),
             el('div', {}, [el('a', { class: 'zeile-titel', href: `#/projekte/${p.id}` }, p.name), el('div', { class: 'zeile-hinweis' }, [p.nr, p.art].filter(Boolean).join(' · ') || ' ')]),
             el('span', {}, p.kunde || '–'),
-            el('span', { class: 'sekundaer' }, z.art === 'pauschal' ? 'Pauschal' : 'Stunden'),
+            el('span', { class: 'sekundaer' }, z.art === 'pauschal' ? (z.nachtragH ? 'Pauschal + Nachtrag' : 'Pauschal') : 'Stunden'),
             el('span', { class: 'rechts' }, z.offenH != null ? `${zahlText(z.offenH, 2)} h` : '–'),
             el('span', { class: 'rechts fett' }, z.offenBetrag != null ? euro(z.offenBetrag) : 'kein Satz'),
             el('span', {}, el('span', { class: `chip ${seit[0]}`.trim() }, seit[1])),

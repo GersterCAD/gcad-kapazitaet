@@ -123,6 +123,15 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026, Folge-Entwurf Index B vom 
 - Ansichten (`js/ansichten/nachkalkulation.js`): `#/projekte/<id>/nachkalkulation` (Knopf „Nachkalkulation“ auf der Projektseite) und `#/abrechnung/nachkalkulation` (dritter Reiter unter Abrechnung). Laufende Projekte: „vorläufig“, Abweichung erst nach Abschluss. Ergebnisrechnung und Kostenformular ohne eigenen Entwurf.
 - Später: Export Excel/PDF. Alte Aufträge aus dem Werkzeug werden nicht übernommen.
 
+## Erweiterungen nach Index B (Joachims Wunschliste, ohne Entwurf, aus vorhandenen Bausteinen)
+
+Reihenfolge: 1. Nachtrag beim Timer + Wochenstart/-abschluss · 2. Zahlungen aus Lexware, Liquiditätsvorschau, Angebote nachfassen · 3. Urlaub/Was-wäre-wenn, Siri-Kurzbefehl, Termin vorbei → buchen, Jahresziel.
+
+- **Nachtrag beim Timer** (`js/kern/nachtrag.js`): Knopf „Nachtrag“ im laufenden Timer (ab jetzt oder rückwirkend seit Start), „War Nachtrag“ nach dem Stoppen (umbuchen), „+ Nachtrag“ im bereiten Timer. Neue Position `N1`, `N2` … mit `typ: 'nachtrag'`, `status: 'verguetet'`, Soll 0 h.
+  - Nachtrag und Regie **ohne eigenen Preis** werden nach Stunden abgerechnet, auch im Pauschalprojekt (`nachStundenPosition()`): eigene Zeilen in der Schlussrechnung, in `offenUebersicht()` (`nachtragH`, Art „Pauschal + Nachtrag“), Erlös in der Nachkalkulation = Ist × Satz.
+- **Deine Woche** (`js/kern/woche.js`, `js/ansichten/woche.js`): Karte auf der Übersicht unter dem Warnband. Mo–Do Wochenstart (Deadlines/Meilensteine der Woche, Engpässe, Rechnungen > 30 Tage oder abgeschlossen, Angebote ohne Antwort seit 14 Tagen), Fr–So Wochenabschluss (gebucht je Tag gegen freie Zeit, Lücken > 1 h, Timer läuft noch, Nachtrag-Stunden, neu offen, nächste Woche). „Erledigt“ je Woche und Gerät in `meta.woche`.
+  - Angebot bekommt beim Markieren als versendet `versendetAm`.
+
 ## Zeitstopper (ersetzt Tyme)
 
 - `daten.timer = { projektId, positionNr, notiz, start }` – höchstens einer, liegt in den Daten und kommt per Abgleich auf alle Geräte (zwei verschiedene Timer = Konflikt).

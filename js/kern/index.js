@@ -15,3 +15,5 @@ export * from './abrechnung.js';
 export * from './angebot.js';
 export * from './rechnung.js';
 export * from './nachkalkulation.js';
+export * from './nachtrag.js';
+export * from './woche.js';

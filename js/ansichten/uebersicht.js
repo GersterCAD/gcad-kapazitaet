@@ -13,6 +13,7 @@ import { planChip } from './projekt.js';
 import { uhrzeit } from '../kalender.js';
 import { startKnopf, zuletztText } from './zeitstopper.js';
 import * as stoppuhr from '../stoppuhr.js';
+import { wochenKarte } from './woche.js';
 
 const ZEITRAUM = [
   { wochen: 4, name: '4 Wochen' },
@@ -59,6 +60,7 @@ export function uebersicht() {
     ]),
     kennzahlKacheln(d, kz),
     kz.warnung.aktiv ? warnHinweis(d, kz.warnung) : null,
+    wochenKarte(d, plan),
     el('div', { class: 'zweispaltig' }, [
       diagramm(d, liste, fest, farbe, anfragen),
       el('aside', { class: 'spalte-seite', 'aria-labelledby': 'h-vor' }, [

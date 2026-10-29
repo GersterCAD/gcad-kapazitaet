@@ -9,6 +9,7 @@
 import { soll } from './daten.js';
 import { stundensatz } from './abrechnung.js';
 import { rechnungenVon } from './rechnung.js';
+import { nachStundenPosition } from './nachtrag.js';
 
 export const KOSTEN_ART = [
   { id: 'material', name: 'Material' },
@@ -90,6 +91,7 @@ export function nachkalkulation(daten, projektId) {
   const vorlaeufig = p.status !== 'abgeschlossen';
   const erloesVor = (x, istH) => {
     if (x.status === 'unverguetet') return 0;
+    if (nachStundenPosition(x)) return istH * (satzStd ?? 0); // Nachtrag/Regie ohne Preis: nach Aufwand
     if (mitPreis) return x.preis ?? 0;
     if (pauschal) return sollSumme > 0 ? (p.pauschalpreis ?? 0) * x.sollH / sollSumme : (p.pauschalpreis ?? 0) / pos.length;
     return istH * (satzStd ?? 0);

@@ -204,7 +204,7 @@ function statusKette(a) {
     return el(setzbar ? 'button' : 'span', {
       type: setzbar ? 'button' : null, class: `kettenglied${aktiv ? ' aktiv' : ''}`, 'data-fokus': setzbar ? `kette-${status}` : null,
       title: setzbar ? `Als ${text} markieren` : null,
-      onclick: setzbar ? () => aendereAngebot(a.id, (x) => { x.status = status; }) : null,
+      onclick: setzbar ? () => aendereAngebot(a.id, (x) => { x.status = status; if (status === 'versendet') x.versendetAm = zustand.heute(); }) : null,
     }, text);
   };
   const pfeil = () => el('span', { class: 'kettenpfeil', 'aria-hidden': 'true' }, '›');
