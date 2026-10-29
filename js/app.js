@@ -9,6 +9,7 @@ import { kalenderSeite, kalenderVergessen } from './ansichten/kalender.js';
 import { anfrageSeite, anfrageKopf, anfrageVergessen } from './ansichten/anfrage.js';
 import { projektliste } from './ansichten/projekte.js';
 import { abrechnungOffen, rechnungenListe, rechnungSeite, rechnungKopf, rechnungVergessen, unterseiten } from './ansichten/abrechnung.js';
+import { einnahmenSeite } from './ansichten/einnahmen.js';
 import { nachkalkSeite, nachkalkKopf, nachkalkUebersichtSeite } from './ansichten/nachkalkulation.js';
 import * as lexware from './lexware.js';
 import { angeboteListe, angebotSeite, angebotKopf, auftragSeite, auftragVergessen } from './ansichten/angebote.js';
@@ -61,6 +62,7 @@ const ANSICHTEN = {
   abrechnung: () => ({ bereich: 'abrechnung', kontext: 'Abrechnung', inhalt: abrechnungOffen() }),
   'abrechnung/nachkalkulation': () => ({ bereich: 'abrechnung', titel: 'Nachkalkulation', kontext: 'Nachkalkulation', inhalt: nachkalkUebersichtSeite(unterseiten('nachkalkulation')) }),
   'abrechnung/rechnungen': () => ({ bereich: 'abrechnung', titel: 'Rechnungen', kontext: 'Rechnungen', inhalt: rechnungenListe() }),
+  'abrechnung/einnahmen': () => ({ bereich: 'abrechnung', titel: 'Einnahmen', kontext: 'Einnahmen', inhalt: einnahmenSeite() }),
   kalender: () => ({
     bereich: 'kalender',
     kontext: 'Kalender',

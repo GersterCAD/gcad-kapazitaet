@@ -17,3 +17,4 @@ export * from './rechnung.js';
 export * from './nachkalkulation.js';
 export * from './nachtrag.js';
 export * from './woche.js';
+export * from './einnahmen.js';

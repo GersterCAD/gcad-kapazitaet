@@ -22,6 +22,35 @@ export const RECHNUNG_STATUS_NAME = {
 };
 export const LAENGER_OFFEN_TAGE = 30;
 
+// ---------- Zahlungsstand aus Lexware Office (lexware/zahlungen.json, nur gelesen) ----------
+
+/** Lexware-Belegstatus → Anzeige in der App */
+export const ZAHLUNG_NAME = { open: 'offen', overdue: 'überfällig', paid: 'bezahlt', paidoff: 'bezahlt', voided: 'storniert' };
+export const ZAHLUNG_CHIP = { open: '', overdue: 'rot', paid: 'gruen', paidoff: 'gruen', voided: '' };
+export const bezahlt = (z) => ['paid', 'paidoff'].includes(z?.status);
+
+/**
+ * Zahlungsstand an die Rechnungen der App hängen (ändert daten): r.lexware = { status, nummer, faellig, gesamt, offen, bezahltAm }.
+ * liste: rechnungen aus zahlungen.json. Gibt zurück, ob sich etwas geändert hat.
+ */
+export function zahlungenUebernehmen(daten, liste = []) {
+  const nachId = new Map(liste.map((x) => [x.id, x]));
+  let geaendert = false;
+  for (const r of daten.rechnungen ?? []) {
+    const x = r.lexwareId && nachId.get(r.lexwareId);
+    if (!x) continue;
+    const neu = {
+      status: x.status, nummer: x.nummer ?? null, faellig: x.faellig ?? null, gesamt: x.gesamt ?? null, offen: x.offen ?? null,
+      bezahltAm: bezahlt(x) ? (r.lexware?.bezahltAm && bezahlt(r.lexware) ? r.lexware.bezahltAm : x.geaendert ?? null) : null,
+    };
+    if (JSON.stringify(neu) !== JSON.stringify(r.lexware ?? null)) { r.lexware = neu; geaendert = true; }
+  }
+  return geaendert;
+}
+
+/** Noch Entwurf in Lexware (übertragen, aber dort nicht festgeschrieben) */
+export const lexwareEntwurf = (r) => r.status === 'uebertragen' && !r.lexware;
+
 const runde2 = (x) => Math.round(x * 100) / 100;
 const tm = (iso) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.`;
 

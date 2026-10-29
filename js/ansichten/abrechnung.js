@@ -8,7 +8,7 @@ import * as lexware from '../lexware.js';
 import { euro, ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN, offen, kundeVon } from '../kern/abrechnung.js';
 import {
   RECHNUNG_ART, RECHNUNG_STATUS_NAME, rechnungBerechnen, rechnungAnlegen, rechnungStatus, rechnungLoeschen,
-  rechnungenVon, offenUebersicht, pauschalBerechnet,
+  rechnungenVon, offenUebersicht, pauschalBerechnet, ZAHLUNG_NAME, ZAHLUNG_CHIP, bezahlt, lexwareEntwurf,
 } from '../kern/rechnung.js';
 import { ausText, tagKurz } from '../kern/datum.js';
 import { loeschKnopf } from './einstellungen.js';
@@ -21,6 +21,7 @@ export function unterseiten(aktiv) {
   return el('nav', { class: 'umschalter', 'aria-label': 'Unterseite' }, [
     el('a', { href: '#/abrechnung', 'aria-current': aktiv === 'offen' ? 'page' : null }, 'Offen'),
     el('a', { href: '#/abrechnung/rechnungen', 'aria-current': aktiv === 'rechnungen' ? 'page' : null }, 'Rechnungen'),
+    el('a', { href: '#/abrechnung/einnahmen', 'aria-current': aktiv === 'einnahmen' ? 'page' : null }, 'Einnahmen'),
     el('a', { href: '#/abrechnung/nachkalkulation', 'aria-current': aktiv === 'nachkalkulation' ? 'page' : null }, 'Nachkalkulation'),
   ]);
 }
@@ -45,6 +46,15 @@ export function lexwareHinweis() {
 
 const statusPunkt = (r) => ({ uebertragen: 'gelb', erledigt: 'gruen', fehler: 'rot', sendet: 'stahl', entwurf: '' }[r.status] ?? '');
 
+/** Zahlungsstand aus Lexware: „RE 26-108 · offen bis 06.11.“, „bezahlt 03.11.“, „überfällig“ */
+function zahlungChip(r) {
+  const z = r.lexware;
+  const text = bezahlt(z) ? `bezahlt${z.bezahltAm ? ` ${tm(z.bezahltAm)}` : ''}` : z.status === 'open' && z.faellig ? `offen bis ${tm(z.faellig)}` : ZAHLUNG_NAME[z.status] ?? z.status;
+  return el('a', { class: 'rechnung-status nowrap-text', href: lexware.link('rechnung', r.lexwareId), target: '_blank', rel: 'noopener', title: z.nummer ?? '' }, [
+    el('span', { class: `chip ${ZAHLUNG_CHIP[z.status] ?? ''}`.trim() }, text),
+  ]);
+}
+
 function rechnungZeile(d, r, { mitProjekt = true } = {}) {
   const p = d.projekte.find((x) => x.id === r.projektId);
   return el('div', { class: 'rechnungszeile zahl' }, [
@@ -53,7 +63,7 @@ function rechnungZeile(d, r, { mitProjekt = true } = {}) {
       ? [el('a', { href: `#/projekte/${r.projektId}/rechnung` }, p?.name ?? 'Projekt'), ` · ${r.titel}`]
       : r.titel),
     el('span', { class: 'rechnung-betrag fett-mittel' }, euro(r.netto)),
-    el('span', { class: 'lexware-status rechnung-status' }, [el('span', { class: `punkt ${statusPunkt(r)}`.trim(), 'aria-hidden': 'true' }),
+    r.lexware ? zahlungChip(r) : el('span', { class: 'lexware-status rechnung-status' }, [el('span', { class: `punkt ${statusPunkt(r)}`.trim(), 'aria-hidden': 'true' }),
       r.status === 'uebertragen' && r.lexwareId ? el('a', { href: lexware.link('rechnung', r.lexwareId), target: '_blank', rel: 'noopener' }, RECHNUNG_STATUS_NAME[r.status]) : RECHNUNG_STATUS_NAME[r.status]]),
   ]);
 }
@@ -69,7 +79,7 @@ export function abrechnungOffen() {
   const zeilen = alle.filter((z) => filterOffen === 'alle' || z.art === filterOffen);
   const summe = alle.reduce((s, z) => s + (z.offenBetrag ?? 0), 0);
   const alt = alle.filter((z) => z.aelter > 0).sort((a, b) => b.aelter - a.aelter);
-  const entwuerfe = (d.rechnungen ?? []).filter((r) => r.status === 'uebertragen');
+  const entwuerfe = (d.rechnungen ?? []).filter(lexwareEntwurf);
   const inApp = (d.rechnungen ?? []).filter((r) => ['entwurf', 'fehler', 'sendet'].includes(r.status));
   const zuletzt = [...(d.rechnungen ?? [])].sort((a, b) => (b.erstellt ?? '').localeCompare(a.erstellt ?? '')).slice(0, 5);
 
@@ -145,7 +155,8 @@ function aktionen(d, r) {
   if (r.status === 'sendet' && lexware.dauertLange(l)) {
     knoepfe.push(el('button', { type: 'button', class: 'pille', onclick: () => lexware.aufgeben('rechnung', r.id) }, 'Übertragung abbrechen'));
   }
-  if (r.status !== 'sendet') {
+  const fest = !!r.lexware && r.lexware.status !== 'voided'; // in Lexware festgeschrieben: nur dort korrigieren
+  if (r.status !== 'sendet' && !fest) {
     knoepfe.push(loeschKnopf(r.status === 'uebertragen' || r.status === 'erledigt' ? 'Rückgängig' : 'Löschen', async () => {
       await zustand.sichern('Rechnung gelöscht');
       await zustand.aendern((x) => { rechnungLoeschen(x, r.id); });
@@ -153,7 +164,8 @@ function aktionen(d, r) {
   }
   return el('div', {}, [
     r.status === 'fehler' ? el('div', { class: 'zeile-hinweis rot' }, r.fehler) : null,
-    r.status === 'uebertragen' ? el('div', { class: 'zeile-hinweis' }, 'Rückgängig gibt die Stunden wieder frei. Den Entwurf in Lexware löschst du dort.') : null,
+    fest ? el('div', { class: 'zeile-hinweis' }, `In Lexware festgeschrieben${r.lexware.nummer ? ` als ${r.lexware.nummer}` : ''}. Korrigieren geht nur dort (Rechnungskorrektur).`)
+      : r.status === 'uebertragen' ? el('div', { class: 'zeile-hinweis' }, 'Rückgängig gibt die Stunden wieder frei. Den Entwurf in Lexware löschst du dort.') : null,
     el('div', { class: 'knopfreihe eng' }, knoepfe),
   ]);
 }

@@ -131,7 +131,7 @@ export function beispielDaten() {
       ],
     }),
     angebot({
-      nummer: 'AN 26-030', datum: '2026-10-21', gueltigBis: '2026-11-04', kunde: 'Beispiel Bau GmbH', projektname: 'Ergänzung Werkplanung', art: 'Werkplanung', status: 'versendet',
+      nummer: 'AN 26-030', datum: '2026-10-12', gueltigBis: '2026-11-11', versendetAm: '2026-10-12', kunde: 'Beispiel Bau GmbH', projektname: 'Ergänzung Werkplanung', art: 'Werkplanung', status: 'versendet',
       positionen: [pos('Werkplanung Ergänzung', 'Zusätzliche Schränke Flur', 22)],
     }),
     angebot({
@@ -141,6 +141,17 @@ export function beispielDaten() {
   );
 
   return d;
+}
+
+/** Beispiel für den Zahlungsstand aus Lexware Office (wie lexware/zahlungen.json), Namen und Beträge erfunden */
+export function beispielZahlungen() {
+  const r = (id, nummer, status, kunde, datum, faellig, gesamt, offen, geaendert, art = 'rechnung') => ({ id: `beispiel-${id}`, nummer, art, status, kunde, datum, faellig, gesamt, offen, geaendert });
+  return [
+    r('1', 'RE 26-104', 'overdue', 'Muster AG', '2026-10-06', '2026-10-20', 3427.2, 3427.2, '2026-10-06'),
+    r('2', 'RE 26-101', 'paid', 'Praxis Beispiel', '2026-09-28', '2026-10-12', 2570.4, 0, '2026-10-05'),
+    r('3', 'RE 26-108', 'open', 'Laden Beispiel', '2026-10-23', '2026-11-06', 2056.32, 2056.32, '2026-10-23'),
+    r('4', 'AR 26-110', 'open', 'Gasthaus Beispiel', '2026-10-29', '2026-11-12', 1190, 1190, '2026-10-29', 'abschlag'),
+  ];
 }
 
 /** Beispieltermine, wie sie später aus dem Kalender-JSON kommen (nur für die Beispieldaten). */

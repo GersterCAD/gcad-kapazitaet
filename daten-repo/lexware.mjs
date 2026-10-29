@@ -6,9 +6,10 @@
 //   lexware/ergebnisse/<id>.json  von hier:     { id, ok, lexwareId, fehler, details, zeit }
 //   lexware/status.json           von hier:     { verbunden, organisation, geprueft, fehler }
 //   lexware/kontakte.json         von hier:     { abgeholt, kontakte: [{ id, name, nummer }] }
+//   lexware/zahlungen.json        von hier:     { abgeholt, rechnungen: [{ id, nummer, status, kunde, datum, faellig, gesamt, offen, geaendert }] }
 //
-// Sicherheit: Es gibt nur diese drei Arten. Angelegt werden ausschließlich ENTWÜRFE (nie festgeschrieben,
-// nie versendet). Die Nutzlast an Lexware wird hier aus erlaubten Feldern neu gebaut, nichts wird blind durchgereicht.
+// Sicherheit: Es gibt nur diese vier Arten. Angelegt werden ausschließlich ENTWÜRFE (nie festgeschrieben,
+// nie versendet). Kontakte und Zahlungsstand werden nur gelesen. Die Nutzlast an Lexware wird hier aus erlaubten Feldern neu gebaut, nichts wird blind durchgereicht.
 // Secret: LEXWARE_API_KEY (in Lexware Office unter Erweiterungen → Public API erzeugt).
 
 import { readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
@@ -16,7 +17,7 @@ import { join } from 'node:path';
 
 export const API = 'https://api.lexware.io';
 const ORDNER = process.argv[2] || 'lexware';
-const ARTEN = ['rechnung', 'angebot', 'kontakte'];
+const ARTEN = ['rechnung', 'angebot', 'kontakte', 'zahlungen'];
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---------- Nutzlast bauen (auch für Tests exportiert) ----------
@@ -110,6 +111,26 @@ export async function kontakteHolen(schluessel, holen) {
   return kontakte.sort((a, b) => a.name.localeCompare(b.name, 'de'));
 }
 
+const tagVon = (x) => (typeof x === 'string' ? x.slice(0, 10) : null);
+
+/** Zahlungsstand der Rechnungen der letzten 400 Tage (ohne Entwürfe): nur lesen, über die Belegliste */
+export async function zahlungenHolen(schluessel, holen, heute = new Date()) {
+  const von = new Date(heute.getTime() - 400 * 86400000).toISOString().slice(0, 10);
+  const rechnungen = [];
+  for (let seite = 0; seite < 20; seite++) {
+    const j = await lex(`/v1/voucherlist?voucherType=invoice,downpaymentinvoice&voucherStatus=open,overdue,paid,paidoff,voided&voucherDateFrom=${von}&page=${seite}&size=250`, {}, schluessel, holen);
+    for (const v of j?.content ?? []) {
+      rechnungen.push({
+        id: v.id, nummer: v.voucherNumber ?? null, art: v.voucherType === 'downpaymentinvoice' ? 'abschlag' : 'rechnung',
+        status: v.voucherStatus, kunde: v.contactName ?? null, datum: tagVon(v.voucherDate), faellig: tagVon(v.dueDate),
+        gesamt: zahl(v.totalAmount), offen: v.openAmount == null ? null : zahl(v.openAmount), geaendert: tagVon(v.updatedDate),
+      });
+    }
+    if (j?.last !== false || seite + 1 >= (j?.totalPages ?? 1)) break;
+  }
+  return rechnungen.sort((a, b) => (a.faellig ?? '').localeCompare(b.faellig ?? ''));
+}
+
 /** Einen Auftrag ausführen. Gibt das Ergebnis zurück (wirft nicht). */
 export async function ausfuehren(auftrag, schluessel, holen) {
   const id = String(auftrag?.id ?? '');
@@ -118,6 +139,7 @@ export async function ausfuehren(auftrag, schluessel, holen) {
     if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Auftrag ohne gültige ID.');
     if (!ARTEN.includes(auftrag.art)) throw new Error(`Unbekannte Art „${auftrag.art}“.`);
     if (auftrag.art === 'kontakte') return { id, ok: true, kontakte: (await kontakteHolen(schluessel, holen)).length, zeit };
+    if (auftrag.art === 'zahlungen') return { id, ok: true, zeit }; // holt main() nach jedem Lauf
     const pfad = auftrag.art === 'rechnung' ? '/v1/invoices' : '/v1/quotations';
     const body = auftrag.art === 'rechnung' ? rechnungNutzlast(auftrag.daten ?? {}) : angebotNutzlast(auftrag.daten ?? {});
     const j = await lex(pfad, { method: 'POST', body }, schluessel, holen); // ohne ?finalize=true → Entwurf
@@ -174,6 +196,13 @@ async function main() {
       console.log(`${kontakte.length} Kontakte geholt.`);
     } catch (f) { console.error(`Kontakte: ${f.message}`); }
   }
+
+  // Zahlungsstand bei jedem Lauf (ein, zwei Aufrufe)
+  try {
+    const rechnungen = await zahlungenHolen(schluessel);
+    await schreiben('zahlungen.json', { abgeholt: new Date().toISOString(), rechnungen });
+    console.log(`${rechnungen.length} Rechnungen mit Zahlungsstand.`);
+  } catch (f) { console.error(`Zahlungen: ${f.message}`); }
 
   // Alte Ergebnisse nach 30 Tagen aufräumen
   const grenze = Date.now() - 30 * 86400000;

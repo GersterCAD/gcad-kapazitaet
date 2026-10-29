@@ -16,6 +16,7 @@ import { loeschKnopf } from './einstellungen.js';
 import * as lexware from '../lexware.js';
 import { lexwareHinweis } from './abrechnung.js';
 import { feiertag } from '../kern/feiertage.js';
+import { nachfassen, NACHFASSEN_TAGE } from '../kern/woche.js';
 
 const tm = (iso) => (iso ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.` : '–');
 const zahlEin = (v) => { const x = Number(String(v).replace(',', '.')); return Number.isFinite(x) && x >= 0 ? x : 0; };
@@ -54,6 +55,8 @@ export function angeboteListe() {
   const liste = alle.filter((a) => filter === 'alle' || a.status === filter);
   const kz = angebotsKennzahlen(d, heute);
   const anzahl = (h) => `${kz[h].anzahl} ${kz[h].anzahl === 1 ? 'Angebot' : 'Angebote'} · ${zahlText(kz[h].h)} h`;
+  const nf = nachfassen(d, heute);
+  const nfIds = new Set(nf.map((x) => x.angebot.id));
 
   return el('div', { class: 'seite' }, [
     el('div', { class: 'seitenkopf mitte' }, [
@@ -66,6 +69,13 @@ export function angeboteListe() {
       kachel(`Angenommen ${kz.jahr}`, euro(kz.angenommen.netto), anzahl('angenommen')),
       kachel('Annahmequote', kz.quote == null ? '–' : `${kz.quote} %`, kz.entschieden ? `${kz.angenommenAnzahl} von ${kz.entschieden} entschiedenen` : 'noch nichts entschieden'),
     ]),
+    nf.length ? el('div', { class: 'hinweiskarte' }, [
+      el('span', { class: 'chip gelb' }, 'Nachfassen'),
+      el('div', { class: 'fuellung' }, [
+        `${nf.length === 1 ? 'Ein Angebot wartet' : `${nf.length} Angebote warten`} seit über ${NACHFASSEN_TAGE} Tagen auf Antwort: `,
+        ...nf.flatMap((x, i) => [i ? ', ' : '', el('a', { href: `#/angebote/${x.angebot.id}` }, x.angebot.nummer), ` (${x.angebot.kunde || 'ohne Kunde'}, ${x.seitTagen} Tage)`]),
+      ]),
+    ]) : null,
     el('div', { class: 'wahlreihe', role: 'group', 'aria-label': 'Filter' }, [...ANGEBOT_STATUS, 'alle'].map((k) => el('button', {
       type: 'button', class: 'wahl', 'aria-pressed': String(k === filter), 'data-fokus': `afilter-${k}`,
       onclick: () => { filter = k; zustand.neuZeichnen(); },
@@ -84,7 +94,7 @@ export function angeboteListe() {
             el('span', { class: abgelaufen(a, heute) ? 'gelb-text fett-mittel' : null, title: abgelaufen(a, heute) ? 'Abgelaufen' : null }, tm(a.gueltigBis)),
             el('span', { class: 'rechts fett-mittel' }, euro(s.netto)),
             el('span', { class: 'rechts' }, zahlText(s.geplantH)),
-            el('span', {}, statusChip(a)),
+            el('span', { class: 'knopfreihe eng' }, [statusChip(a), nfIds.has(a.id) ? el('span', { class: 'chip gelb' }, 'nachfassen') : null]),
             lexwareStatus(a),
           ]);
         }),
@@ -105,6 +115,20 @@ function kachel(label, wert, unter) {
 // ---------- Angebot bearbeiten ----------
 
 let satzOffen = false;
+
+/** Versendet und seit 14 Tagen keine Antwort: Hinweis mit „Nachgefasst“ (setzt die 14 Tage neu) */
+function nachfassenHinweis(d, a) {
+  const x = nachfassen(d, zustand.heute()).find((y) => y.angebot.id === a.id);
+  if (!x) return null;
+  return el('div', { class: 'hinweiskarte' }, [
+    el('span', { class: 'chip gelb' }, 'Nachfassen'),
+    el('div', { class: 'fuellung' }, `${x.nachgefasst ? `Zuletzt nachgefasst am ${tm(a.nachgefasstAm)}` : `Versendet am ${tm(a.versendetAm ?? a.datum)}`}, seit ${x.seitTagen} Tagen keine Antwort.${x.abgelaufen ? ' Das Angebot ist abgelaufen – beim Nachfassen gleich verlängern.' : ''}`),
+    el('button', {
+      type: 'button', class: 'pille', 'data-fokus': 'a-nachgefasst', title: `Erinnert in ${NACHFASSEN_TAGE} Tagen wieder`,
+      onclick: () => aendereAngebot(a.id, (y) => { y.nachgefasstAm = zustand.heute(); }),
+    }, 'Nachgefasst'),
+  ]);
+}
 
 export function angebotKopf(id) {
   const a = finde(id);
@@ -139,6 +163,7 @@ export function angebotSeite(id) {
       ]),
     ]),
     lexwareZustand(a),
+    nachfassenHinweis(d, a),
     el('div', { class: 'angebot-flaeche' }, [
       el('div', { class: 'angebot-haupt' }, [kopfKarte(d, a), positionenKarte(d, a, s), fussKarte(a), fest ? null : el('div', { class: 'knopfreihe' }, [loeschKnopf('Angebot löschen', async () => {
         await zustand.sichern('Angebot gelöscht');

@@ -18,6 +18,7 @@ import { ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN, euro } from '../kern/abrechnun
 import { meilensteineExportieren, offeneMeilensteine } from './kalender.js';
 import { feiertageBW, feiertag } from '../kern/feiertage.js';
 import { abwesenheit } from '../kern/kapazitaet.js';
+import { ZAHLUNGSZIEL_TAGE, zahlungsziel } from '../kern/einnahmen.js';
 import { ausText, alsText, plusTage, tagKurz, tagLang } from '../kern/datum.js';
 
 const ANLASS = { export: 'beim Export', import: 'vor dem Import', wiederherstellen: 'vor dem Wiederherstellen', loeschen: 'vor dem Löschen', abgleich: 'vor dem Abgleich' };
@@ -376,6 +377,14 @@ function abrechnungKarte(d) {
         ]),
         el('div', { class: 'wahlreihe', role: 'group', 'aria-labelledby': 'l-zusammen' }, ZUSAMMENFASSEN.map((x) =>
           wahlPille(x.name, x.id === art, () => setze((e) => { e.abrechnungZusammenfassen = x.id; }), { art: 'breit', fokus: `zusammen-${x.id}` }))),
+      ]),
+      el('div', { class: 'zeile ohne-linie umbruch' }, [
+        el('div', { class: 'fuellung' }, [
+          el('div', { class: 'zeile-titel', id: 'l-ziel' }, 'Zahlungsziel'),
+          el('div', { class: 'zeile-hinweis' }, 'Für die Einnahmen-Vorschau: so lange dauert es, bis eine Rechnung bezahlt ist'),
+        ]),
+        el('div', { class: 'wahlreihe', role: 'group', 'aria-labelledby': 'l-ziel' }, ZAHLUNGSZIEL_TAGE.map((t) =>
+          wahlPille(`${t} Tage`, t === zahlungsziel(d), () => setze((e) => { e.zahlungszielTage = t; }), { fokus: `ziel-${t}` }))),
       ]),
     ]),
     kundenSaetze(d),

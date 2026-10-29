@@ -21,11 +21,11 @@ export function wochenKey(heute) {
 /** Montag bis Donnerstag Wochenstart, ab Freitag Wochenabschluss */
 export const wochenModus = (heute) => ([5, 6, 0].includes(ausText(heute).getDay()) ? 'abschluss' : 'start');
 
-/** Angebote, bei denen du nachfassen solltest: versendet, seit 14 Tagen keine Antwort */
+/** Angebote, bei denen du nachfassen solltest: versendet (oder zuletzt nachgefasst) vor 14 Tagen, keine Antwort */
 export function nachfassen(daten, heute, ab = NACHFASSEN_TAGE) {
   return (daten.angebote ?? [])
     .filter((a) => a.status === 'versendet')
-    .map((a) => ({ angebot: a, seitTagen: tageZwischen(a.versendetAm ?? a.datum, heute), abgelaufen: !!a.gueltigBis && a.gueltigBis < heute }))
+    .map((a) => ({ angebot: a, seitTagen: tageZwischen([a.versendetAm ?? a.datum, a.nachgefasstAm].filter(Boolean).sort().pop(), heute), nachgefasst: !!a.nachgefasstAm, abgelaufen: !!a.gueltigBis && a.gueltigBis < heute }))
     .filter((x) => x.seitTagen >= ab)
     .sort((a, b) => b.seitTagen - a.seitTagen);
 }

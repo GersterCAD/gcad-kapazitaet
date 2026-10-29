@@ -524,6 +524,9 @@ a.kopf-status:hover { color: var(--text); }
 .seitenkopf.mitte > h1 { flex: 1; min-width: 200px; margin: 0; }
 .umschalter a { position: relative; display: inline-flex; align-items: center; height: 28px; padding: 0 16px; border-radius: var(--radius-pille); font-size: 12px; color: var(--text); text-decoration: none; }
 .umschalter a::after { content: ""; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
+.seitenkopf > nav.umschalter { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.seitenkopf > nav.umschalter a { flex: none; white-space: nowrap; }
+@media (max-width: 640px) { .seitenkopf > nav.umschalter a { padding: 0 12px; } }
 .umschalter a[aria-current="page"] { background: var(--weiss); box-shadow: 0 0 0 1px var(--linie); font-weight: 600; }
 .umschalter.hoch button { height: 36px; padding: 0 12px; }
 .chip.rand-stahl { background: var(--weiss); box-shadow: inset 0 0 0 1px var(--stahl); color: var(--stahl); }
@@ -852,3 +855,26 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .nk-zeile { display: grid; grid-template-columns: 1.6fr 1.1fr 110px 90px 110px 110px 80px 110px 130px; gap: 12px; align-items: center; min-height: 52px; padding: 0 24px; border-bottom: 1px solid var(--leiste); font-size: 13px; color: var(--text); text-decoration: none; }
 a.nk-zeile:hover { color: var(--text); background: var(--leiste); }
 .nk-kopf { min-height: 0; padding-top: 8px; padding-bottom: 8px; border-top: 1px solid var(--linie); border-bottom-color: var(--linie); background: var(--leiste); }
+
+/* Einnahmen (Abrechnung → Einnahmen): Balken je Woche in den Stahlblau-Stufen */
+.ein-sicher { background: var(--stahl); }
+.ein-bald { background: #7C93A0; }
+.ein-geplant { background: #FFFFFF; box-shadow: inset 0 0 0 1px #7C93A0; }
+.legende-farbe.ein-geplant { background: var(--weiss); }
+.ein-diagramm { display: grid; grid-template-columns: repeat(8, minmax(64px, 1fr)); gap: 8px; margin-top: 24px; overflow-x: auto; }
+.ein-spalte { display: flex; flex-direction: column; align-items: stretch; gap: 4px; text-align: center; min-width: 64px; }
+.ein-wert { font-size: 11px; color: var(--text-2); min-height: 14px; white-space: nowrap; }
+.ein-saeule { display: flex; flex-direction: column-reverse; justify-content: flex-start; border-bottom: 1px solid var(--text); }
+.ein-teil { border-radius: 2px; }
+.ein-teil + .ein-teil { margin-bottom: 1px; }
+.ein-kw { font-size: 12px; font-weight: 500; margin-top: 4px; }
+.ein-datum { font-size: 11px; color: var(--text-2); }
+.ein-zeile { display: grid; grid-template-columns: 80px minmax(0, 1fr) auto; gap: 4px 16px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--leiste); color: inherit; text-decoration: none; }
+.ein-zeile:last-child { border-bottom: 0; }
+.ein-zeile[href]:hover .zeile-text { color: var(--stahl); }
+.ein-rechts { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.ein-rechts .chip { min-width: 96px; justify-content: center; }
+@media (max-width: 640px) {
+  .ein-zeile { grid-template-columns: 72px minmax(0, 1fr); }
+  .ein-rechts { grid-column: 2; justify-content: space-between; }
+}

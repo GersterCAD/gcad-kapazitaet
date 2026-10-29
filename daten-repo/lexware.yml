@@ -3,7 +3,7 @@
 # Secret dort: LEXWARE_API_KEY (in Lexware Office unter Erweiterungen → Public API erzeugen)
 #
 # Startet, sobald die App einen Auftrag in lexware/auftraege/ ablegt (Rechnungs- oder Angebotsentwurf),
-# außerdem einmal am Morgen für die Kontakte und den Verbindungsstand. Legt in Lexware nur Entwürfe an.
+# außerdem morgens und mittags für Kontakte, Zahlungsstand und Verbindung. Legt in Lexware nur Entwürfe an.
 
 name: Lexware Office
 
@@ -12,7 +12,7 @@ on:
     paths:
       - 'lexware/auftraege/**'
   schedule:
-    - cron: '30 5 * * 1-6'
+    - cron: '30 5,11 * * 1-6'
   workflow_dispatch:
 
 permissions:
