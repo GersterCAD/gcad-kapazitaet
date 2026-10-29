@@ -19,6 +19,9 @@ import { meilensteineExportieren, offeneMeilensteine } from './kalender.js';
 import { feiertageBW, feiertag } from '../kern/feiertage.js';
 import { abwesenheit } from '../kern/kapazitaet.js';
 import { ZAHLUNGSZIEL_TAGE, zahlungsziel } from '../kern/einnahmen.js';
+import { jahresziel } from '../kern/jahresziel.js';
+import { kalenderFragt } from '../kern/terminbuchung.js';
+import { kurzbefehlAdresse } from '../stoppuhr.js';
 import { ausText, alsText, plusTage, tagKurz, tagLang } from '../kern/datum.js';
 
 const ANLASS = { export: 'beim Export', import: 'vor dem Import', wiederherstellen: 'vor dem Wiederherstellen', loeschen: 'vor dem Löschen', abgleich: 'vor dem Abgleich' };
@@ -47,6 +50,7 @@ export function einstellungen() {
       abrechnungKarte(d),
       lexwareKarte(d),
       nachkalkKarte(d),
+      kurzbefehleKarte(d),
       datenKarte(),
     ]),
   ]);
@@ -306,6 +310,7 @@ function urlaubKarte(d) {
   return el('section', { class: 'karte', 'aria-labelledby': 'h-ab' }, [
     el('div', { class: 'kartenkopf' }, [
       el('h2', { id: 'h-ab', class: 'fuellung' }, 'Urlaub und Feiertage'),
+      el('a', { class: 'pille', href: '#/planspiel' }, 'Passenden Urlaub finden'),
       el('button', { type: 'button', class: 'pille', 'data-fokus': 'urlaub-neu', onclick: () => { urlaubOffen = 'neu'; blockOffen = null; zustand.neuZeichnen(); } }, 'Urlaub eintragen'),
     ]),
     el('div', { class: 'stapel' }, liste),
@@ -419,6 +424,11 @@ function nachkalkKarte(d) {
       zahlFeld('jahresstunden', 'Produktive Stunden im Jahr', 'Was du wirklich verrechnen kannst', '10'),
       zahlFeld('kmSatz', 'km-Satz', 'Für Fahrten (km × Satz)'),
     ]),
+    el('div', { class: 'label mit-abstand-gross' }, 'Jahresziel · Leiste auf der Übersicht'),
+    el('div', { class: 'mit-abstand-mittel' }, [
+      zielFeld(d, 'umsatz', 'Umsatz im Jahr', 'netto, aus deinen Rechnungen', '1000'),
+      zielFeld(d, 'stunden', 'Stunden im Jahr', 'gebuchte Stunden, zum Beispiel deine produktiven Stunden', '10'),
+    ]),
     el('div', { class: 'kachel klein mit-abstand' }, [
       el('div', { class: 'zeile-titel' }, 'Rechenhilfe Selbstkostensatz'),
       el('div', { class: 'zeile-hinweis' }, 'Büro, Software-Abos, Hardware, Versicherungen, Fahrzeug, Steuerberater, Fortbildung, Beiträge.'),
@@ -427,6 +437,38 @@ function nachkalkKarte(d) {
           type: 'button', class: 'pille', disabled: !(n.jahresstunden > 0), 'data-fokus': 'nk-fix-uebernehmen',
           onclick: () => { if (Number(fixkosten) > 0 && n.jahresstunden > 0) setze((e) => { e.nachkalk = { ...n, selbstkosten: Math.round(Number(fixkosten) / n.jahresstunden * 100) / 100 }; }); },
         }, 'Übernehmen')]),
+    ]),
+  ]);
+}
+
+function zielFeld(d, key, label, hinweis, step) {
+  const z = jahresziel(d);
+  const f = el('input', {
+    class: 'feld zahl satzfeld', type: 'number', min: '0', step, inputmode: 'decimal', value: z[key] ?? '', 'aria-label': label, 'data-fokus': `jz-${key}`,
+    onchange: () => setze((e) => { e.jahresziel = { ...jahresziel({ einstellungen: e }), [key]: f.value === '' ? null : Math.round(Number(f.value)) }; }),
+  });
+  return el('div', { class: 'zeile schmal' }, [el('div', { class: 'fuellung' }, [el('div', { class: 'zeile-titel' }, label), el('div', { class: 'zeile-hinweis' }, hinweis)]), f]);
+}
+
+// ---------- Kurzbefehle (Siri, Kurzbefehle-App) ----------
+
+function kurzbefehleKarte(d) {
+  const basis = `${location.origin}${location.pathname}`;
+  const aktiv = d.projekte.filter((p) => ['auftrag', 'laeuft'].includes(p.status)).sort((a, b) => a.name.localeCompare(b.name));
+  const zeile = (titel, hinweis, adresse) => el('div', { class: 'zeile schmal umbruch' }, [
+    el('div', { class: 'fuellung' }, [el('div', { class: 'zeile-titel' }, titel), el('div', { class: 'zeile-hinweis adresse' }, hinweis ?? adresse)]),
+    el('button', {
+      type: 'button', class: 'pille', 'data-fokus': `kb-${titel}`,
+      onclick: async (ev) => { try { await navigator.clipboard.writeText(adresse); ev.currentTarget.textContent = 'Kopiert'; } catch { prompt('Adresse kopieren:', adresse); } },
+    }, 'Adresse kopieren'),
+  ]);
+  return el('section', { class: 'karte', 'aria-labelledby': 'h-kb' }, [
+    el('h2', { id: 'h-kb' }, 'Kurzbefehle für Siri'),
+    el('p', { class: 'kartentext' }, 'In der App „Kurzbefehle“: neuer Kurzbefehl → „URL öffnen“ → Adresse einfügen → Name, zum Beispiel „Timer Frankfurt“. Dann sagst du „Hey Siri, Timer Frankfurt“. Am Mac öffnet sich die App im Dock. Am iPhone öffnet sich Safari, deshalb dort die App auch in Safari mit GitHub verbinden.'),
+    el('div', { class: 'mit-abstand' }, [
+      zeile('Timer stoppen', null, `${basis}#/timer/stopp`),
+      zeile('Weiterarbeiten', 'Startet das zuletzt benutzte Projekt', `${basis}#/timer/weiter`),
+      ...aktiv.map((p) => zeile(`Timer ${p.name.split(' · ')[0]}`, null, kurzbefehlAdresse(basis, p))),
     ]),
   ]);
 }
@@ -544,6 +586,11 @@ function kalenderKarte(d) {
           el('div', { class: 'zeile-titel' }, name),
           el('div', { class: 'zeile-hinweis' }, `${REGEL_TEXT[k.regel] ?? k.regel}${zusatz}`),
         ]),
+        an ? wahlPille('nachfragen', kalenderFragt(d, name), () => setze((e) => {
+          let x = e.kalender.find((y) => y.name === name);
+          if (!x) { x = { name, regel: 'alle' }; e.kalender.push(x); }
+          x.nachfragen = !kalenderFragt({ einstellungen: e }, name);
+        }), { label: `Nach Terminen aus ${name} fragen, ob sie auf ein Projekt gebucht werden`, fokus: `kal-frag-${i}` }) : null,
         schalter(an, `${name} berücksichtigen`, (neu) => setze((e) => {
           let x = e.kalender.find((y) => y.name === name);
           if (!x) { x = { name, regel: 'alle' }; e.kalender.push(x); }

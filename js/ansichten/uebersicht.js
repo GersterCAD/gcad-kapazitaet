@@ -14,6 +14,8 @@ import { uhrzeit } from '../kalender.js';
 import { startKnopf, zuletztText } from './zeitstopper.js';
 import * as stoppuhr from '../stoppuhr.js';
 import { wochenKarte } from './woche.js';
+import { terminFrageKarte } from './terminfrage.js';
+import { jahreszielLeiste } from './jahresziel.js';
 
 const ZEITRAUM = [
   { wochen: 4, name: '4 Wochen' },
@@ -52,15 +54,20 @@ export function uebersicht() {
         el('div', { class: 'label' }, 'Übersicht'),
         el('h1', {}, `Auslastung der nächsten ${zeitraumName}`),
       ]),
-      el('div', { class: 'umschalter', role: 'group', 'aria-label': 'Zeitraum' }, ZEITRAUM.map((z) =>
-        el('button', {
-          type: 'button', 'aria-pressed': String(z.wochen === zeitraum), 'data-fokus': `zeitraum-${z.wochen}`,
-          onclick: () => { zeitraum = z.wochen; zustand.neuZeichnen(); },
-        }, z.name))),
+      el('div', { class: 'knopfreihe eng' }, [
+        el('a', { class: 'pille', href: '#/planspiel' }, 'Was wäre, wenn …'),
+        el('div', { class: 'umschalter', role: 'group', 'aria-label': 'Zeitraum' }, ZEITRAUM.map((z) =>
+          el('button', {
+            type: 'button', 'aria-pressed': String(z.wochen === zeitraum), 'data-fokus': `zeitraum-${z.wochen}`,
+            onclick: () => { zeitraum = z.wochen; zustand.neuZeichnen(); },
+          }, z.name))),
+      ]),
     ]),
     kennzahlKacheln(d, kz),
     kz.warnung.aktiv ? warnHinweis(d, kz.warnung) : null,
+    terminFrageKarte(d, opts.termine),
     wochenKarte(d, plan),
+    jahreszielLeiste(d, heute),
     el('div', { class: 'zweispaltig' }, [
       diagramm(d, liste, fest, farbe, anfragen),
       el('aside', { class: 'spalte-seite', 'aria-labelledby': 'h-vor' }, [

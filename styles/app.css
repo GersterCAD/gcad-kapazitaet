@@ -878,3 +878,28 @@ a.nk-zeile:hover { color: var(--text); background: var(--leiste); }
   .ein-zeile { grid-template-columns: 72px minmax(0, 1fr); }
   .ein-rechts { grid-column: 2; justify-content: space-between; }
 }
+
+/* Termin vorbei → buchen (Übersicht) */
+.termin-frage h2 { margin: 4px 0 0; }
+.termin-frage-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 0; border-bottom: 1px solid var(--leiste); }
+.termin-frage-zeile:last-child { border-bottom: 0; }
+.termin-frage-zeile .termin-was { min-width: 180px; }
+.termin-frage-zeile select.feld { width: auto; min-width: 200px; }
+
+/* Jahresziel (Übersicht): Balken wie Soll-Ist, Strich = anteilig bis heute */
+.jahresziel { display: flex; flex-direction: column; gap: 12px; }
+.jahresziel h2 { margin: 0; }
+.jz-zeile { display: grid; grid-template-columns: minmax(160px, 220px) 1fr auto; gap: 8px 24px; align-items: center; }
+.jz-balken { position: relative; height: 8px; border-radius: 4px; background: var(--linie); }
+.jz-ist { height: 100%; border-radius: 4px; background: var(--stahl); }
+.jz-ist.gruen { background: #1E7D3C; }
+.jz-ist.gelb { background: #6B4500; }
+.jz-ist.rot { background: #A1261B; }
+.jz-strich { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--text); }
+.jz-wert { display: flex; align-items: center; gap: 8px; min-width: 180px; }
+@media (max-width: 640px) {
+  .jz-zeile { grid-template-columns: 1fr auto; }
+  .jz-balken { grid-column: 1 / -1; grid-row: 2; }
+  .jz-wert { min-width: 0; }
+}
+.zeile-hinweis.adresse { word-break: break-all; }

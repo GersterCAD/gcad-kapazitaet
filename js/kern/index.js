@@ -18,3 +18,6 @@ export * from './nachkalkulation.js';
 export * from './nachtrag.js';
 export * from './woche.js';
 export * from './einnahmen.js';
+export * from './terminbuchung.js';
+export * from './planspiel.js';
+export * from './jahresziel.js';

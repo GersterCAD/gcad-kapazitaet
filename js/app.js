@@ -10,6 +10,7 @@ import { anfrageSeite, anfrageKopf, anfrageVergessen } from './ansichten/anfrage
 import { projektliste } from './ansichten/projekte.js';
 import { abrechnungOffen, rechnungenListe, rechnungSeite, rechnungKopf, rechnungVergessen, unterseiten } from './ansichten/abrechnung.js';
 import { einnahmenSeite } from './ansichten/einnahmen.js';
+import { planspielSeite } from './ansichten/planspiel.js';
 import { nachkalkSeite, nachkalkKopf, nachkalkUebersichtSeite } from './ansichten/nachkalkulation.js';
 import * as lexware from './lexware.js';
 import { angeboteListe, angebotSeite, angebotKopf, auftragSeite, auftragVergessen } from './ansichten/angebote.js';
@@ -62,6 +63,7 @@ const ANSICHTEN = {
   abrechnung: () => ({ bereich: 'abrechnung', kontext: 'Abrechnung', inhalt: abrechnungOffen() }),
   'abrechnung/nachkalkulation': () => ({ bereich: 'abrechnung', titel: 'Nachkalkulation', kontext: 'Nachkalkulation', inhalt: nachkalkUebersichtSeite(unterseiten('nachkalkulation')) }),
   'abrechnung/rechnungen': () => ({ bereich: 'abrechnung', titel: 'Rechnungen', kontext: 'Rechnungen', inhalt: rechnungenListe() }),
+  planspiel: () => ({ bereich: 'uebersicht', titel: 'Was wäre, wenn', zurueck: '#/uebersicht', kontext: 'Was wäre, wenn', inhalt: planspielSeite() }),
   'abrechnung/einnahmen': () => ({ bereich: 'abrechnung', titel: 'Einnahmen', kontext: 'Einnahmen', inhalt: einnahmenSeite() }),
   kalender: () => ({
     bereich: 'kalender',
@@ -193,7 +195,15 @@ function zeigen() {
   if (fokus) app.querySelector(`[data-fokus="${CSS.escape(fokus)}"]`)?.focus({ preventScroll: true });
 }
 
-window.addEventListener('hashchange', () => {
+// Kurzbefehle (#/timer/start/…): ausführen, dann die Projektseite zeigen – ohne den Befehl in der Verlaufsliste
+async function kurzbefehl() {
+  const ziel = await stoppuhr.befehl(location.hash.replace(/^#\/?/, ''));
+  if (ziel) history.replaceState(null, '', ziel);
+  return !!ziel;
+}
+
+window.addEventListener('hashchange', async () => {
+  if (await kurzbefehl()) { zeigen(); return; }
   formularVergessen();
   anfrageVergessen(location.hash.replace(/^#\/?/, ''));
   kalenderVergessen();
@@ -207,7 +217,7 @@ kalender.abonnieren(zeigen);
 abgleich.abonnieren(zeigen);
 lexware.abonnieren(zeigen);
 Promise.all([zustand.starten(), github.starten(), kalender.starten(), abgleich.starten(), lexware.starten()])
-  .then(() => { kalender.automatisch(); abgleich.automatisch(); stoppuhr.ticken(); lexware.abgleichen(); lexware.beobachten(); })
+  .then(async () => { kalender.automatisch(); abgleich.automatisch(); stoppuhr.ticken(); lexware.abgleichen(); lexware.beobachten(); await kurzbefehl(); })
   .catch((f) => console.error('Daten konnten nicht geladen werden:', f))
   .finally(zeigen);
 

@@ -108,6 +108,7 @@ export function beispielDaten() {
   );
   // Nachkalkulation: erfundene Werte zum Ausprobieren
   d.einstellungen.nachkalk = { zielSatz: 72, selbstkosten: 35, jahresstunden: 1300, kmSatz: 0.3 };
+  d.einstellungen.jahresziel = { umsatz: 9000, stunden: 180 }; // passend zu den wenigen Beispielrechnungen
   d.kosten.push(
     { id: neueId(), projektId: id.frankfurt, art: 'reise', bez: 'Aufmaß vor Ort', datum: '2026-10-26', km: 120, betrag: 36, positionNr: null, weiter: false },
     { id: neueId(), projektId: id.alt1, art: 'material', bez: 'Plots', datum: '2026-03-20', betrag: 24, positionNr: null, weiter: false },

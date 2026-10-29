@@ -104,6 +104,47 @@ export async function nachtragStarten(projektId, wahl) {
   return nr;
 }
 
+// ---------- Kurzbefehle (Siri, Kurzbefehle-App, Lesezeichen) ----------
+// #/timer/start/<Projektnummer oder Name>, #/timer/stopp, #/timer/weiter
+
+const schluessel = (s) => String(s ?? '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+
+/** Projekt zu einem Kurzbefehl: Nummer, ID, Name oder Anfang des Namens (nur Aufträge) */
+export function projektZu(text) {
+  const k = schluessel(decodeURIComponent(text ?? ''));
+  if (!k) return null;
+  const aktiv = zustand.aktuell().projekte.filter((p) => ['auftrag', 'laeuft'].includes(p.status));
+  return aktiv.find((p) => p.id === text || schluessel(p.nr) === k)
+    ?? aktiv.find((p) => schluessel(p.name) === k)
+    ?? aktiv.find((p) => schluessel(p.name).startsWith(k) || schluessel(p.name.split(' · ')[0]) === k)
+    ?? (k.length >= 4 ? aktiv.find((p) => schluessel(p.name).includes(k) || schluessel(p.kunde).includes(k)) : null) ?? null;
+}
+
+/** Adresse für den Kurzbefehl eines Projekts */
+export const kurzbefehlAdresse = (basis, p) => `${basis}#/timer/start/${encodeURIComponent(p.nr || p.name.split(' · ')[0])}`;
+
+/** Kurzbefehl ausführen. Gibt die Adresse zurück, die danach gezeigt wird (oder null, wenn es kein Kurzbefehl war). */
+export async function befehl(pfad) {
+  const m = /^timer\/(start|stopp|weiter)(?:\/(.+))?$/.exec(pfad);
+  if (!m) return null;
+  if (m[1] === 'stopp') {
+    const t = laeuft();
+    if (!t) return '#/uebersicht';
+    await stoppen();
+    return `#/projekte/${t.projektId}`;
+  }
+  if (m[1] === 'weiter') {
+    const z = zuletzt()[0];
+    if (!z) return '#/projekte';
+    if (laeuft()?.projektId !== z.projektId) await schnellstart(z.projektId);
+    return `#/projekte/${z.projektId}`;
+  }
+  const p = projektZu(m[2]);
+  if (!p) return '#/projekte';
+  if (laeuft()?.projektId !== p.id) await schnellstart(p.id);
+  return `#/projekte/${p.id}`;
+}
+
 export async function notizSetzen(notiz) {
   await zustand.aendern((d) => { if (d.timer) d.timer.notiz = notiz; });
 }
