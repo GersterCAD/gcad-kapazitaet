@@ -8,7 +8,9 @@ import { euro } from '../kern/abrechnung.js';
 import {
   ANGEBOT_STATUS, ANGEBOT_STATUS_NAME, PROJEKTARTEN, neuesAngebot, neuePosition, pufferH, geplantH, positionsBetrag, zulagenListe, neueZulagen,
   summen, angebotsKennzahlen, abgelaufen, angebotAnnehmen, annahmeZuruecknehmen,
+  neueAufgabenTypen, grundVon, aufgabenAn, aufgabenAus, grundAusAufgaben, aufgabenTypenAbgleichen,
 } from '../kern/angebot.js';
+import { kalkulatorLesen, angebotAusKalkulator, IMPORT_MAX_BYTES } from '../kern/kalkulatorimport.js';
 import { anfragePruefen } from '../kern/anfrage.js';
 import { lernwerte, LERNWERT_AB } from '../kern/lernwert.js';
 import { ausText, alsText, plusTage, tagKurz, isoWoche, montag } from '../kern/datum.js';
@@ -21,7 +23,7 @@ import { nachfassen, NACHFASSEN_TAGE } from '../kern/woche.js';
 const tm = (iso) => (iso ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.` : '–');
 const zahlEin = (v) => { const x = Number(String(v).replace(',', '.')); return Number.isFinite(x) && x >= 0 ? x : 0; };
 const finde = (id) => (zustand.aktuell().angebote ?? []).find((a) => a.id === id);
-const aendereAngebot = (id, fn) => zustand.aendern((d) => { const a = d.angebote.find((x) => x.id === id); if (a) fn(a, d); });
+const aendereAngebot = (id, fn) => zustand.aendern((d) => { const a = d.angebote.find((x) => x.id === id); if (a) { fn(a, d); grundAusAufgaben(a); } });
 
 const STATUS_CHIP = { entwurf: 'chip', versendet: 'chip rand-stahl', angenommen: 'chip gruen', abgelehnt: 'chip rot' };
 const statusChip = (a) => el('span', { class: STATUS_CHIP[a.status] }, ANGEBOT_STATUS_NAME[a.status]);
@@ -44,6 +46,45 @@ export async function angebotAnlegen() {
   location.hash = `#/angebote/${id}`;
 }
 
+// ---------- Import alter Kalkulator-Dateien ----------
+
+let importFehler = null;
+let importiert = null;   // { id, datei, hinweise }: Hinweis oben auf dem gerade importierten Angebot
+
+async function kalkulationImportieren(datei) {
+  importFehler = null;
+  try {
+    if (datei.size > IMPORT_MAX_BYTES) throw new Error('Die Datei ist zu groß für eine Kalkulation.');
+    const r = angebotAusKalkulator(zustand.aktuell(), kalkulatorLesen(await datei.text()), zustand.heute());
+    await zustand.aendern((d) => { d.angebote.push(r.angebot); });
+    importiert = { id: r.angebot.id, datei: datei.name, hinweise: r.hinweise };
+    location.hash = `#/angebote/${r.angebot.id}`;
+  } catch (f) {
+    importFehler = f.message;
+    zustand.neuZeichnen();
+  }
+}
+
+function importKnopf() {
+  const datei = el('input', {
+    type: 'file', accept: '.html,text/html', class: 'nur-vorleser', tabindex: '-1', 'aria-hidden': 'true',
+    onchange: () => { const f = datei.files[0]; datei.value = ''; if (f) kalkulationImportieren(f); },
+  });
+  return [datei, el('button', { type: 'button', class: 'pille gross', 'data-fokus': 'angebot-import', onclick: () => datei.click() }, 'Kalkulation importieren')];
+}
+
+function importHinweis(a, s) {
+  if (importiert?.id !== a.id) return null;
+  return el('div', { class: 'hinweiskarte' }, [
+    el('span', { class: 'chip stahl' }, 'Importiert'),
+    el('div', { class: 'fuellung' }, [
+      el('div', { class: 'zahl' }, `${importiert.datei}: ${zahlText(s.geplantH, 2)} h, ${euro(s.netto)} netto. Vergleiche die Summe mit dem Kalkulator.`),
+      ...importiert.hinweise.map((t) => el('div', { class: 'zeile-hinweis ohne-abstand' }, t)),
+    ]),
+    el('button', { type: 'button', class: 'pille', 'data-fokus': 'a-import-ok', onclick: () => { importiert = null; zustand.neuZeichnen(); } }, 'Stimmt'),
+  ]);
+}
+
 // ---------- Liste ----------
 
 let filter = 'alle';
@@ -62,8 +103,12 @@ export function angeboteListe() {
     el('div', { class: 'seitenkopf mitte' }, [
       el('h1', { class: 'ohne-abstand' }, 'Angebote'),
       angeboteUmschalter('angebote'),
-      el('button', { type: 'button', class: 'pille haupt gross', 'data-fokus': 'angebot-neu', onclick: angebotAnlegen }, [plusIcon(), 'Angebot anlegen']),
+      el('div', { class: 'knopfreihe eng' }, [...importKnopf(), el('button', { type: 'button', class: 'pille haupt gross', 'data-fokus': 'angebot-neu', onclick: angebotAnlegen }, [plusIcon(), 'Angebot anlegen'])]),
     ]),
+    importFehler ? el('div', { class: 'zustand rot', role: 'alert' }, [
+      el('div', { class: 'zustand-titel rot-text' }, 'Nicht importiert'),
+      el('div', { class: 'zeile-hinweis ohne-abstand rot-dunkel' }, importFehler),
+    ]) : null,
     el('div', { class: 'raster-kacheln' }, [
       kachel('Offen versendet', euro(kz.versendet.netto), anzahl('versendet')),
       kachel(`Angenommen ${kz.jahr}`, euro(kz.angenommen.netto), anzahl('angenommen')),
@@ -162,6 +207,7 @@ export function angebotSeite(id) {
         lexwareKnopf(a),
       ]),
     ]),
+    importHinweis(a, s),
     lexwareZustand(a),
     nachfassenHinweis(d, a),
     el('div', { class: 'angebot-flaeche' }, [
@@ -170,7 +216,7 @@ export function angebotSeite(id) {
         await zustand.aendern((x) => { x.angebote = x.angebote.filter((y) => y.id !== id); });
         location.hash = '#/angebote';
       })])]),
-      el('aside', { class: 'angebot-seite' }, [zulagenKarte(d, a), summenKarte(d, a, s), kapazitaetKarte(d, a, s), lernwertKarte(d, a, s)]),
+      el('aside', { class: 'angebot-seite' }, [zulagenKarte(d, a), aufgabenTypenKarte(d, a), summenKarte(d, a, s), kapazitaetKarte(d, a, s), lernwertKarte(d, a, s)]),
     ]),
     mobilLeiste(d, a, s),
   ]);
@@ -279,8 +325,9 @@ function kopfKarte(d, a) {
         }, 'Neu') : null,
       ]), { breit: true, hinweis: 'später aus Lexware-Kontakten' }),
       feld('Angebotsnummer', textFeld(a, 'nummer', { id: 'a-n', grau: true })),
+      feld('Projektleiter', textFeld(a, 'projektleiter', { id: 'a-pl' })),
       feld('Projektname', textFeld(a, 'projektname', { id: 'a-p' }), { breit: true }),
-      el('div', { class: 'feldgruppe' }, [
+      el('div', { class: 'feldgruppe spanne-2' }, [
         el('label', { class: 'feld-label', for: 'a-d' }, 'Datum · gültig bis'),
         el('div', { class: 'knopfreihe eng nowrap' }, [textFeld(a, 'datum', { id: 'a-d', typ: 'date' }), (() => {
           const g = textFeld(a, 'gueltigBis', { id: 'a-g', typ: 'date' }); g.setAttribute('aria-label', 'gültig bis'); return g;
@@ -324,6 +371,7 @@ function positionenKarte(d, a, s) {
       onchange: () => aendernPos(p.id, (q) => { q.beschreibung = besch.value; }),
     }, p.beschreibung ?? '');
     const pauschal = p.abrechnung === 'pauschal';
+    const mitAufgaben = p.aufgaben?.length > 0;
     return el('div', { class: 'ap-zeile' }, [
       el('div', { class: 'ap-nr' }, [
         el('span', { class: 'fett zahl ap-nummer' }, String(i + 1)),
@@ -332,8 +380,15 @@ function positionenKarte(d, a, s) {
           el('button', { type: 'button', class: 'pfeilknopf', 'aria-label': 'nach unten', disabled: i === a.positionen.length - 1, 'data-fokus': `runter-${p.id}`, onclick: () => schieben(i, 1) }, '↓'),
         ]),
       ]),
-      el('div', { class: 'ap-text', 'data-label': 'Bezeichnung' }, [bez, besch]),
-      el('div', { 'data-label': 'Grund h' }, zahlFeld('grundH', 'Grundstunden')),
+      el('div', { class: 'ap-text', 'data-label': 'Bezeichnung' }, [bez, besch, el('div', { class: 'umschalter hoch ap-art', role: 'group', 'aria-label': 'Grundstunden' }, [
+        el('button', { type: 'button', 'aria-pressed': String(!mitAufgaben), 'data-fokus': `gr-stunden-${p.id}`, onclick: () => { if (mitAufgaben) aendernPos(p.id, (q, x) => aufgabenAus(q, x)); } }, 'Stunden'),
+        el('button', {
+          type: 'button', 'aria-pressed': String(mitAufgaben), 'data-fokus': `gr-aufgaben-${p.id}`, disabled: !a.aufgabenTypen?.length,
+          title: a.aufgabenTypen?.length ? null : 'Lege zuerst Aufgaben-Typen an',
+          onclick: () => { if (!mitAufgaben) aendernPos(p.id, (q, x) => aufgabenAn(q, x)); },
+        }, 'Aufgaben'),
+      ])]),
+      el('div', { 'data-label': 'Grund h' }, mitAufgaben ? el('div', { class: 'ap-geplant zahl' }, zahlText(grundVon(p, a), 2)) : zahlFeld('grundH', 'Grundstunden')),
       el('div', { class: 'ap-geplant ap-zulage zahl', 'data-label': 'Zulagen' }, `+ ${zahlText(pufferH(p, a), 2)} h`),
       el('div', { class: 'ap-geplant zahl', 'data-label': 'geplant' }, zahlText(geplantH(p, a))),
       el('div', { 'data-label': 'Abrechnung' }, el('div', { class: 'umschalter hoch', role: 'group', 'aria-label': 'Abrechnung' }, [['stunden', 'Stunden'], ['pauschal', 'Pauschal']].map(([k, n]) => el('button', {
@@ -351,7 +406,39 @@ function positionenKarte(d, a, s) {
         type: 'button', class: 'kreuz gross', 'aria-label': `Position ${i + 1} löschen`,
         onclick: () => aendereAngebot(a.id, (x) => { x.positionen = x.positionen.filter((y) => y.id !== p.id); }),
       }, [kreuzIcon()]),
+      mitAufgaben ? aufgabenTabelle(p) : null,
     ]);
+  };
+
+  // Aufgaben einer Position: Typ, Menge, daraus Minuten und Stunden (wie im Kalkulator)
+  const aufgabenTabelle = (p) => {
+    const minuten = new Map((a.aufgabenTypen ?? []).map((t) => [t.id, t.minuten || 0]));
+    return el('div', { class: 'ap-aufgaben' }, el('div', { class: 'ap-afg-innen' }, [
+      el('div', { class: 'ap-afg-zeile ap-afg-kopf label' }, ['Aufgaben-Typ', 'Menge', 'Minuten', 'Stunden', ''].map((t, i) => el('span', { class: i === 2 || i === 3 ? 'rechts' : null }, t))),
+      ...p.aufgaben.map((x, i) => {
+        const typ = el('select', {
+          class: 'feld afg-typ', 'aria-label': 'Aufgaben-Typ', 'data-fokus': `afg-typ-${p.id}-${i}`,
+          onchange: () => aendernPos(p.id, (q) => { q.aufgaben[i].typId = typ.value; }),
+        }, (a.aufgabenTypen ?? []).map((t) => el('option', { value: t.id, selected: t.id === x.typId }, t.name)));
+        const menge = el('input', {
+          class: 'feld rechts zahl afg-menge', type: 'number', min: '0', step: '1', inputmode: 'decimal', value: String(x.menge ?? 0), 'aria-label': 'Menge', 'data-fokus': `afg-menge-${p.id}-${i}`,
+          onchange: () => aendernPos(p.id, (q) => { q.aufgaben[i].menge = zahlEin(menge.value); }),
+        });
+        const min = (x.menge || 0) * (minuten.get(x.typId) ?? 0);
+        return el('div', { class: 'ap-afg-zeile' }, [
+          typ, menge,
+          el('span', { class: 'afg-min zahl rechts sekundaer' }, `${zahlText(min, 0)} min`),
+          el('span', { class: 'afg-h zahl rechts' }, `${zahlText(min / 60, 2)} h`),
+          p.aufgaben.length > 1
+            ? el('button', { type: 'button', class: 'kreuz', 'aria-label': 'Aufgabe entfernen', onclick: () => aendernPos(p.id, (q) => { q.aufgaben.splice(i, 1); }) }, [kreuzIcon()])
+            : el('span', {}),
+        ]);
+      }),
+      el('button', {
+        type: 'button', class: 'pille gestrichelt', 'data-fokus': `afg-neu-${p.id}`,
+        onclick: () => aendernPos(p.id, (q, x) => { q.aufgaben.push({ typId: x.aufgabenTypen[0].id, menge: 0 }); }),
+      }, 'Aufgabe hinzufügen'),
+    ]));
   };
 
   return el('section', { class: 'karte ohne-innenabstand', 'aria-labelledby': 'h-apos' }, [
@@ -444,6 +531,53 @@ function zulagenKarte(d, a) {
   ]);
 }
 
+// ---------- Aufgaben-Typen (wie im Kalkulator, am Rand) ----------
+
+/** Editor für Aufgaben-Typen: Name, Minuten, entfernen, hinzufügen. aendern(fn) ändert die gespeicherte Liste. */
+export function aufgabenTypenEditor(liste, aendern, { prefix = 'at' } = {}) {
+  return el('div', { class: 'zulagen' }, [
+    ...liste.map((t, i) => {
+      const name = el('input', {
+        class: 'feld zulage-name', type: 'text', value: t.name, 'aria-label': 'Name des Aufgaben-Typs', 'data-fokus': `${prefix}-name-${i}`,
+        onchange: () => aendern((l) => { l[i].name = name.value.trim() || 'Aufgabe'; }),
+      });
+      const min = el('input', {
+        class: 'feld zahl rechts zulage-wert', type: 'number', min: '0', step: '5', inputmode: 'decimal', value: String(t.minuten ?? 0), 'aria-label': `${t.name} in Minuten`, 'data-fokus': `${prefix}-min-${i}`,
+        onchange: () => aendern((l) => { l[i].minuten = zahlEin(min.value); }),
+      });
+      return el('div', { class: 'atyp-zeile' }, [
+        name, el('div', { class: 'atyp-min' }, [min, el('span', { class: 'zeile-text sekundaer' }, 'min')]),
+        el('button', { type: 'button', class: 'kreuz', 'aria-label': `${t.name} entfernen`, onclick: () => aendern((l) => { l.splice(i, 1); }) }, [kreuzIcon()]),
+      ]);
+    }),
+    el('button', {
+      type: 'button', class: 'pille gestrichelt', 'data-fokus': `${prefix}-neu`,
+      onclick: () => aendern((l) => { l.push({ id: globalThis.crypto.randomUUID(), name: 'Neue Aufgabe', minuten: 60 }); }),
+    }, 'Typ hinzufügen'),
+  ]);
+}
+
+function aufgabenTypenKarte(d, a) {
+  const kurz = (l) => JSON.stringify((l ?? []).map(({ name, minuten }) => [name, minuten]));
+  const typenAendern = (fn) => aendereAngebot(a.id, (x, dd) => {
+    const alt = (x.aufgabenTypen ?? []).map((t) => t.id);
+    x.aufgabenTypen ??= [];
+    fn(x, dd);
+    aufgabenTypenAbgleichen(x, alt);
+  });
+  return el('section', { class: 'kachel zulagen-karte', 'aria-labelledby': 'h-atyp' }, [
+    el('h2', { id: 'h-atyp', class: 'label' }, 'Aufgaben-Typen'),
+    el('p', { class: 'kartentext ohne-abstand' }, 'Minuten je Stück. Eine Position rechnet damit, wenn du sie auf „Aufgaben“ stellst.'),
+    el('div', { class: 'mit-abstand-mittel' }, aufgabenTypenEditor(a.aufgabenTypen ?? [], (fn) => typenAendern((x) => fn(x.aufgabenTypen)), { prefix: 'aat' })),
+    el('div', { class: 'knopfreihe eng mit-abstand-mittel' }, kurz(d.einstellungen.angebotAufgabenTypen) === kurz(a.aufgabenTypen)
+      ? [el('span', { class: 'zeile-hinweis ohne-abstand' }, 'Wie die Vorlage in den Einstellungen.')]
+      : [
+          el('button', { type: 'button', class: 'textknopf', 'data-fokus': 'aat-vorlage-speichern', onclick: () => zustand.aendern((x) => { x.einstellungen.angebotAufgabenTypen = neueAufgabenTypen(a.aufgabenTypen ?? []); }) }, 'Als Vorlage speichern'),
+          el('button', { type: 'button', class: 'textknopf', 'data-fokus': 'aat-vorlage-laden', onclick: () => typenAendern((x, dd) => { x.aufgabenTypen = neueAufgabenTypen(dd.einstellungen.angebotAufgabenTypen); }) }, 'Vorlage übernehmen'),
+        ]),
+  ]);
+}
+
 function summenKarte(d, a, s) {
   const satzFeld = el('input', {
     class: 'feld hoch rechts zahl', type: 'number', step: '0.5', min: '0', value: a.stundensatz ?? '', placeholder: s.quelle === 'kunde' ? String(s.satz) : '', 'aria-label': 'Stundensatz für dieses Angebot', 'data-fokus': 'a-satz',
@@ -451,15 +585,29 @@ function summenKarte(d, a, s) {
   });
   const herkunft = s.quelle === 'kunde' ? 'vom Kunden' : s.quelle === 'angebot' ? 'für dieses Angebot' : '';
   const zeile = (l, w, klasse = '') => el('div', { class: `summenzeile ${klasse}`.trim() }, [el('span', { class: 'sekundaer' }, l), el('span', { class: 'zahl' }, w)]);
+  const feldZeile = (l, key, einheit, wert, step) => {
+    const f = el('input', {
+      class: 'feld rechts zahl', type: 'number', min: '0', step, inputmode: 'decimal', value: String(a[key] ?? 0), 'aria-label': `${l} in ${einheit}`, 'data-fokus': `a-${key}`,
+      onchange: () => aendereAngebot(a.id, (x) => { x[key] = zahlEin(f.value); }),
+    });
+    return el('div', { class: 'summenzeile mit-feld' }, [el('span', { class: 'sekundaer' }, l), el('span', { class: 'summenfeld' }, [f, el('span', { class: 'sekundaer' }, einheit)]), el('span', { class: 'zahl' }, wert)]);
+  };
   return el('section', { class: 'kachel', 'aria-labelledby': 'h-asum' }, [
     el('h2', { id: 'h-asum', class: 'label' }, 'Summen'),
     el('div', { class: 'mit-abstand-mittel' }, [
       zeile('Grundstunden', `${zahlText(s.grundH)} h`),
       zeile('Zulagen', `+ ${zahlText(s.pufferH, 2)} h (${s.pufferProzent} %)`),
-      zeile('geplant', `${zahlText(s.geplantH)} h`, 'stahl'),
+      zeile('geplant', `${zahlText(s.geplantH, 2)} h`, 'stahl'),
     ]),
     el('div', { class: 'summen-trenner' }, [
-      zeile('netto', euro(s.netto)),
+      zeile('Lohnsumme', euro(s.lohnsumme)),
+      feldZeile('Gewinnzuschlag', 'gewinnProzent', '%', euro(s.gewinn), '1'),
+      feldZeile('Rabatt', 'rabattH', 'h', `− ${euro(s.rabatt)}`, '0.5'),
+      s.pauschal > 0 ? zeile('Pauschal-Positionen', euro(s.pauschal)) : null,
+    ]),
+    el('div', { class: 'summen-trenner' }, [
+      el('div', { class: 'summenzeile fett' }, [el('span', {}, 'Angebotspreis netto'), el('span', { class: 'zahl' }, euro(s.netto))]),
+      s.entsprichtH != null && s.entsprichtH !== s.geplantH ? zeile('entspricht', `${zahlText(s.entsprichtH, 2)} h`) : null,
       zeile('MwSt 19 %', euro(s.mwst)),
       el('div', { class: 'summenzeile brutto' }, [el('span', {}, 'brutto'), el('span', { class: 'zahl' }, euro(s.brutto))]),
     ]),

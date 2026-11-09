@@ -6,6 +6,10 @@
 //     und Prozent auf die Grundstunden (Kommunikation 3 %, Rücksprachen 8 %, Risiko 5 %, Rückläufer 20 %).
 //     Sie werden nach dem Stundenanteil auf die Positionen verteilt. Grund + Zulagen = geplante Stunden = Soll der Projektposition.
 //  2. Planungspuffer 0–20 % beim Einplanen = Puffer des Projekts, kommt auf das Soll obendrauf. 0 % ist erlaubt.
+//
+// Rechnung des Kalkulators (Anweisung vom 09.11.2026): Stunden einer Position aus Aufgaben-Typen (Menge × Minuten),
+// Angebotspreis = Lohnsumme + Gewinn − Rabatt, Preis je Position nach ihrem Anteil an den Grundstunden.
+// Gewinn und Rabatt ändern nur den Preis, nie die Stunden. Ohne Aufgaben, Gewinn und Rabatt rechnet alles wie bisher.
 
 import { neueId, STATUS_FEST } from './daten.js';
 import { alsText, ausText, plusTage } from './datum.js';
@@ -16,6 +20,7 @@ export const ANGEBOT_STATUS_NAME = { entwurf: 'Entwurf', versendet: 'versendet',
 export const PROJEKTARTEN = ['Aufmaß', 'Entwurf', 'Werkplanung', 'Konstruktion'];
 export const MWST = 0.19;
 export const GUELTIG_TAGE = 30;
+export const PREIS_HINWEIS = 'Alle Preise netto zzgl. gesetzlicher Mehrwertsteuer.';
 /** Zulagen aus dem Kalkulator. Vorlage für neue Angebote, änderbar in den Einstellungen (einstellungen.angebotZulagen). */
 export const STANDARD_ZULAGEN = [
   { name: 'Auftrag anlegen', art: 'fest', wert: 1, an: true },
@@ -26,9 +31,21 @@ export const STANDARD_ZULAGEN = [
   { name: 'Rückläufer / Änderungen', art: 'prozent', wert: 20, an: true },
 ];
 export const neueZulagen = (vorlage = STANDARD_ZULAGEN) => vorlage.map((z) => ({ ...z, id: neueId() }));
+/** Aufgaben-Typen aus dem Kalkulator. Feste IDs, damit die Umstellung auf allen Geräten dasselbe Ergebnis hat. */
+export const STANDARD_AUFGABEN_TYPEN = [
+  { id: 'zeichnung', name: 'Zeichnungszeit', minuten: 60 },
+  { id: 'symbol', name: 'Symbol / Stk.', minuten: 10 },
+  { id: 'layout', name: 'Layoutseite', minuten: 120 },
+  { id: 'export', name: 'Exportseite', minuten: 90 },
+];
+export const STANDARD_GEWINN = 10;
+export const neueAufgabenTypen = (vorlage = STANDARD_AUFGABEN_TYPEN) => vorlage.map((t) => ({ ...t }));
 
 const runde2 = (x) => Math.round(x * 100) / 100;
 const runde1 = (x) => Math.round(x * 10) / 10;
+const kalkulatorRunden = (x) => Number(x.toFixed(2));   // wie toFixed im Kalkulator: 0,975 wird 0,97
+/** Angebote ohne Aufgaben, Gewinn und Rabatt rechnen wie bisher (Satz × Stunden je Position), damit alte Angebote gleich bleiben */
+const ohneGewinn = (a) => !(a.gewinnProzent > 0) && !(a.rabattH > 0) && !a.positionen.some((p) => p.aufgaben?.length);
 
 /** Nächste Angebotsnummer „AN 26-031“ (Jahr aus heute, laufend je Jahr) */
 export function naechsteNummer(daten, heute) {
@@ -43,8 +60,10 @@ export function naechsteNummer(daten, heute) {
 export function neuesAngebot(daten, heute) {
   return {
     id: neueId(), nummer: naechsteNummer(daten, heute), datum: heute, gueltigBis: alsText(plusTage(ausText(heute), GUELTIG_TAGE)),
-    kunde: '', projektname: '', art: '', status: 'entwurf', stundensatz: null, pufferImPreis: true,
+    kunde: '', projektname: '', projektleiter: '', art: '', status: 'entwurf', stundensatz: null, pufferImPreis: true,
     zulagen: neueZulagen(daten.einstellungen?.angebotZulagen ?? STANDARD_ZULAGEN),
+    aufgabenTypen: neueAufgabenTypen(daten.einstellungen?.angebotAufgabenTypen ?? STANDARD_AUFGABEN_TYPEN),
+    gewinnProzent: daten.einstellungen?.angebotGewinnProzent ?? STANDARD_GEWINN, rabattH: 0,
     kopftext: '', fusstext: '', zahlungsbedingungen: '', positionen: [neuePosition()],
     projektId: null, angenommenAm: null, lexwareId: null,
   };
@@ -56,22 +75,58 @@ export function neuePosition(werte = {}) {
   };
 }
 
-export const grundGesamt = (a) => a.positionen.reduce((s, p) => s + (p.grundH || 0), 0);
+/** Grundstunden einer Position: aus ihren Aufgaben (Σ Menge × Minuten ÷ 60), ohne Aufgaben wie eingetippt */
+export function grundVon(pos, a) {
+  if (!pos.aufgaben?.length) return pos.grundH || 0;
+  const typen = new Map((a.aufgabenTypen ?? []).map((t) => [t.id, t.minuten || 0]));
+  return pos.aufgaben.reduce((s, x) => s + (x.menge || 0) * (typen.get(x.typId) ?? 0), 0) / 60;
+}
+/** Position auf Aufgaben umstellen: frühere Zeilen wieder, sonst je Typ eine mit Menge 0. Die eingetippten Stunden bleiben gemerkt. */
+export function aufgabenAn(pos, a) {
+  const ids = new Set((a.aufgabenTypen ?? []).map((t) => t.id));
+  const vorher = (pos.aufgabenVorher ?? []).filter((x) => ids.has(x.typId));
+  pos.aufgaben = vorher.length ? vorher : [...ids].map((typId) => ({ typId, menge: 0 }));
+  pos.grundVorher = pos.grundH || 0;
+  delete pos.aufgabenVorher;
+}
+/** Zurück auf eingetippte Stunden: die Summe der Aufgaben bleibt stehen, ohne Mengen die Stunden von vorher */
+export function aufgabenAus(pos, a) {
+  const h = grundVon(pos, a);
+  pos.grundH = h > 0 ? runde2(h) : pos.grundVorher ?? 0;
+  pos.aufgabenVorher = pos.aufgaben;
+  delete pos.aufgaben;
+  delete pos.grundVorher;
+}
+/** grundH der Positionen mit Aufgaben aus den Aufgaben nachführen (ändert a) */
+export function grundAusAufgaben(a) {
+  for (const p of a.positionen) if (p.aufgaben?.length) p.grundH = grundVon(p, a);
+}
+/** Nach Änderung der Aufgaben-Typen: neue Typen als Zeile mit Menge 0 ergänzen, gelöschte entfernen (ändert a, wie im Kalkulator) */
+export function aufgabenTypenAbgleichen(a, alteIds) {
+  const ids = new Set((a.aufgabenTypen ?? []).map((t) => t.id));
+  const neu = [...ids].filter((id) => !alteIds.includes(id));
+  for (const p of a.positionen) {
+    if (!p.aufgaben?.length) continue;
+    p.aufgaben = [...p.aufgaben.filter((x) => ids.has(x.typId)), ...neu.map((typId) => ({ typId, menge: 0 }))];
+  }
+}
+export const grundGesamt = (a) => a.positionen.reduce((s, p) => s + grundVon(p, a), 0);
 
 /** Zulagen mit ihren Stunden: [{ ...zulage, h }] (ausgeschaltete mit h = 0) */
 export function zulagenListe(a) {
   const grund = grundGesamt(a);
-  return (a.zulagen ?? []).map((z) => ({ ...z, h: !z.an ? 0 : runde2(z.art === 'fest' ? z.wert || 0 : grund * (z.wert || 0) / 100) }));
+  const runde = ohneGewinn(a) ? runde2 : kalkulatorRunden;
+  return (a.zulagen ?? []).map((z) => ({ ...z, h: !z.an ? 0 : runde(z.art === 'fest' ? z.wert || 0 : grund * (z.wert || 0) / 100) }));
 }
 export const zulagenGesamt = (a) => runde2(zulagenListe(a).reduce((s, z) => s + z.h, 0));
 
 /** Zulagen einer Position in Stunden: Anteil nach Grundstunden */
 export function pufferH(pos, a) {
   const grund = grundGesamt(a);
-  return grund > 0 ? runde2(((pos.grundH || 0) / grund) * zulagenGesamt(a)) : 0;
+  return grund > 0 ? runde2((grundVon(pos, a) / grund) * zulagenGesamt(a)) : 0;
 }
 /** Geplante Stunden = Grund + Zulagenanteil */
-export const geplantH = (pos, a) => runde2((pos.grundH || 0) + pufferH(pos, a));
+export const geplantH = (pos, a) => runde2(grundVon(pos, a) + pufferH(pos, a));
 
 /** Stundensatz: am Angebot eingetragen, sonst vom Kunden. { satz, quelle: 'angebot' | 'kunde' | null } */
 export function angebotSatz(daten, a) {
@@ -81,28 +136,51 @@ export function angebotSatz(daten, a) {
   return { satz: null, quelle: null };
 }
 
-/** Betrag einer Position: Pauschalpreis, sonst Satz × Stunden (mit oder ohne Zulagen) */
+/** Preis aller Stunden-Positionen: { basis, h, lohnsumme, gewinn, rabatt, preis }. Pauschal-Positionen sind nicht dabei. */
+function stundenPreis(a, satz) {
+  const basis = a.positionen.filter((p) => p.abrechnung !== 'pauschal').reduce((s, p) => s + grundVon(p, a), 0);
+  const alle = grundGesamt(a);
+  const h = a.pufferImPreis !== false && alle > 0 ? basis + zulagenGesamt(a) * (basis / alle) : basis;
+  const lohnsumme = h * satz;
+  const gewinn = lohnsumme * (a.gewinnProzent || 0) / 100;
+  const rabatt = (a.rabattH || 0) * satz;
+  return { basis, h, lohnsumme, gewinn, rabatt, preis: Math.max(0, lohnsumme + gewinn - rabatt) };
+}
+
+/** Betrag einer Position: Pauschalpreis, sonst ihr Anteil am Angebotspreis (ohne Gewinn und Rabatt: Satz × Stunden) */
 export function positionsBetrag(pos, satz, a) {
   if (pos.abrechnung === 'pauschal') return pos.pauschalpreis ?? 0;
   if (!satz) return 0;
-  return runde2((a.pufferImPreis !== false ? geplantH(pos, a) : pos.grundH || 0) * satz);
+  if (ohneGewinn(a)) return runde2((a.pufferImPreis !== false ? geplantH(pos, a) : grundVon(pos, a)) * satz);
+  const { basis, preis } = stundenPreis(a, satz);
+  if (!(basis > 0)) return 0;
+  const anteil = (p) => runde2((grundVon(p, a) / basis) * preis);
+  // Die letzte Position gleicht die Rundung aus, damit die Summe der Positionen dem Angebotspreis entspricht (Joachims Entscheidung)
+  const stunden = a.positionen.filter((p) => p.abrechnung !== 'pauschal' && grundVon(p, a) > 0);
+  if (pos.id !== stunden.at(-1)?.id) return anteil(pos);
+  return Math.max(0, runde2(runde2(preis) - stunden.slice(0, -1).reduce((s, p) => s + anteil(p), 0)));
 }
 
 /** Summen eines Angebots */
 export function summen(daten, a) {
   const { satz, quelle } = angebotSatz(daten, a);
-  let grund = 0, puffer = 0, netto = 0;
+  let grund = 0, puffer = 0, netto = 0, pauschal = 0;
   for (const p of a.positionen) {
-    grund += p.grundH || 0;
+    grund += grundVon(p, a);
     netto += positionsBetrag(p, satz, a);
+    if (p.abrechnung === 'pauschal') pauschal += p.pauschalpreis ?? 0;
   }
   puffer = zulagenGesamt(a);
   const geplant = grund + puffer;
-  netto = runde2(netto);
+  const sp = satz ? stundenPreis(a, satz) : { lohnsumme: 0, gewinn: 0, rabatt: 0, preis: 0 };
+  const lohnsumme = ohneGewinn(a) ? netto - pauschal : sp.lohnsumme;
+  netto = runde2(ohneGewinn(a) ? netto : sp.preis + pauschal);
   const mwst = runde2(netto * MWST);
   return {
     satz, quelle, grundH: runde2(grund), pufferH: runde2(puffer), geplantH: runde2(geplant),
     pufferProzent: grund > 0 ? Math.round((puffer / grund) * 100) : 0,
+    pauschal: runde2(pauschal), lohnsumme: runde2(lohnsumme), gewinn: runde2(sp.gewinn), rabatt: runde2(sp.rabatt),
+    entsprichtH: satz ? runde2(geplant - (a.rabattH || 0) + sp.gewinn / satz) : null,
     netto, mwst, brutto: runde2(netto + mwst), jeStunde: geplant > 0 ? runde2(netto / geplant) : null,
     ohneSatz: !satz && a.positionen.some((p) => p.abrechnung !== 'pauschal'),
   };
@@ -178,17 +256,21 @@ export function annahmeZuruecknehmen(daten, angebotId) {
   return true;
 }
 
-/** Auftrag für die GitHub Action: Angebot als Entwurf in Lexware Office (nur die Felder, die die Action annimmt) */
+/**
+ * Auftrag für die GitHub Action: Angebot als Entwurf in Lexware Office (nur die Felder, die die Action annimmt).
+ * Wie im Kalkulator (Joachims Entscheidung vom 09.11.2026): jede Position als 1 × Pauschal mit ihrem Preis,
+ * Zulagen, Gewinn und Rabatt stecken anteilig darin und werden nicht ausgewiesen. Positionen mit 0 € fallen weg.
+ */
 export function lexwareAngebot(daten, a) {
   const { satz } = angebotSatz(daten, a);
   const k = kundeVon(daten, { kunde: a.kunde });
   return {
     art: 'angebot', kontaktId: k?.lexwareKontaktId ?? null, name: a.kunde || 'Kunde',
-    titel: a.projektname || 'Angebot', einleitung: a.kopftext || '', bemerkung: [a.fusstext, a.zahlungsbedingungen].filter(Boolean).join('\n\n'),
+    titel: a.projektname || 'Angebot', einleitung: a.kopftext || '',
+    bemerkung: [a.fusstext, a.zahlungsbedingungen, a.fusstext?.includes(PREIS_HINWEIS) ? '' : PREIS_HINWEIS].filter(Boolean).join('\n\n'),
     datum: a.datum, gueltigBis: a.gueltigBis,
-    zeilen: a.positionen.filter((p) => positionsBetrag(p, satz, a) > 0).map((p) => (p.abrechnung === 'pauschal'
-      ? { name: p.bezeichnung || 'Position', beschreibung: p.beschreibung || '', menge: 1, einheit: 'Pauschal', preisNetto: p.pauschalpreis }
-      : { name: p.bezeichnung || 'Position', beschreibung: p.beschreibung || '', menge: a.pufferImPreis === false ? p.grundH : geplantH(p, a), einheit: 'Stunden', preisNetto: satz })),
+    zeilen: a.positionen.filter((p) => positionsBetrag(p, satz, a) > 0).map((p) => (
+      { name: p.bezeichnung || 'Position', beschreibung: p.beschreibung || '', menge: 1, einheit: 'Pauschal', preisNetto: positionsBetrag(p, satz, a) })),
   };
 }
 

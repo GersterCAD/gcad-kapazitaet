@@ -23,6 +23,7 @@ function daten() {
     { id: 'z2', name: 'Rückläufer', art: 'prozent', wert: 10, an: true },
     { id: 'z3', name: 'Risiko', art: 'prozent', wert: 5, an: false },
   ];
+  a.gewinnProzent = 0;   // hier geht es um Stunden und Zulagen, Gewinn und Rabatt: kalkulator.test.js
   d.angebote.push(a);
   return { d, a };
 }

@@ -903,3 +903,31 @@ a.nk-zeile:hover { color: var(--text); background: var(--leiste); }
   .jz-wert { min-width: 0; }
 }
 .zeile-hinweis.adresse { word-break: break-all; }
+
+/* Angebot: Aufgaben je Position und Aufgaben-Typen (wie im Kalkulator) */
+.ap-art { align-self: flex-start; }
+.ap-aufgaben { grid-column: 2 / -1; container-type: inline-size; }
+.ap-afg-innen { display: flex; flex-direction: column; gap: 4px; align-items: stretch; max-width: 640px; padding: 12px 16px; border-radius: var(--radius-karte, 12px); background: var(--leiste); }
+.ap-afg-innen > .pille { align-self: flex-start; margin-top: 8px; }
+.ap-afg-zeile { display: grid; grid-template-columns: minmax(0, 1fr) 88px 80px 72px 44px; gap: 8px; align-items: center; min-height: 44px; font-size: 13px; }
+.ap-afg-kopf { min-height: 0; padding-bottom: 4px; }
+.ap-afg-zeile .feld { height: 36px; min-width: 0; width: 100%; font-size: 13px; }
+.atyp-zeile { display: grid; grid-template-columns: minmax(0, 1fr) auto 44px; gap: 8px; align-items: center; min-height: 48px; }
+.atyp-zeile .feld { height: 36px; min-width: 0; width: 100%; font-size: 13px; }
+.atyp-min { display: flex; align-items: center; gap: 4px; }
+.atyp-min .feld { width: 64px; padding: 0 8px; }
+.summenzeile.mit-feld { align-items: center; gap: 8px; padding: 4px 0; }
+.summenzeile.mit-feld > .zahl { min-width: 64px; text-align: right; }
+.summenfeld { display: flex; align-items: center; gap: 4px; }
+.summenfeld > .sekundaer { width: 12px; }
+.summenfeld .feld { width: 56px; height: 36px; padding: 0 8px; font-size: 13px; }
+@container (max-width: 460px) {
+  .ap-afg-zeile { grid-template-columns: minmax(0, 1fr) auto auto 44px; grid-template-areas: "typ typ typ weg" "menge min h ."; row-gap: 4px; padding: 4px 0; }
+  .ap-afg-zeile > .afg-typ { grid-area: typ; }
+  .ap-afg-zeile > .afg-menge { grid-area: menge; width: 72px; }
+  .ap-afg-zeile > .afg-min { grid-area: min; }
+  .ap-afg-zeile > .afg-h { grid-area: h; }
+  .ap-afg-zeile > .kreuz, .ap-afg-zeile > span:empty { grid-area: weg; }
+  .ap-afg-kopf { display: none; }
+}
+@media (max-width: 1180px) { .ap-zeile > .ap-aufgaben { grid-column: 1 / -1; } }

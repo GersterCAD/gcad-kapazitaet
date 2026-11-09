@@ -2,9 +2,9 @@
 // Eine JSON-Datei, Datum als YYYY-MM-DD, Stunden als Zahl, IDs als UUID.
 // Berechnet, nicht gespeichert: Soll, Ist, Feiertage, Wochenkapazität, Termine (kommen aus dem Kalender-JSON).
 
-import { zulagenUmstellen, STANDARD_ZULAGEN } from './angebot.js';
+import { zulagenUmstellen, neueAufgabenTypen, STANDARD_ZULAGEN, STANDARD_AUFGABEN_TYPEN, STANDARD_GEWINN } from './angebot.js';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const STATUS = ['anfrage', 'angebot', 'auftrag', 'laeuft', 'pausiert', 'abgeschlossen', 'abgesagt'];
 export const STATUS_NAME = {
@@ -32,6 +32,8 @@ export function standardEinstellungen() {
     timerRundung: 15,
     abrechnungZusammenfassen: 'tag',
     angebotZulagen: STANDARD_ZULAGEN.map((z) => ({ ...z })),
+    angebotAufgabenTypen: neueAufgabenTypen(STANDARD_AUFGABEN_TYPEN),
+    angebotGewinnProzent: STANDARD_GEWINN,
     nachkalk: { zielSatz: null, selbstkosten: null, jahresstunden: null, kmSatz: 0.3 },
     kalender: [
       { name: 'Gerster CAD', regel: 'alle' },
@@ -123,6 +125,8 @@ export function pruefeDaten(roh) {
   zahl(e.standardPuffer, 'Standard-Puffer', 0, 20, fehler);
   if (e.maxTagH < e.regeltagH) fehler.push('Der längste Tag ist kürzer als der Regeltag.');
   if (!Array.isArray(e.angebotZulagen)) e.angebotZulagen = basis.einstellungen.angebotZulagen;
+  if (!Array.isArray(e.angebotAufgabenTypen)) e.angebotAufgabenTypen = basis.einstellungen.angebotAufgabenTypen;
+  zahl(e.angebotGewinnProzent, 'Standard-Gewinnzuschlag', 0, 1000, fehler);
   e.nachkalk = { ...basis.einstellungen.nachkalk, ...(e.nachkalk ?? {}) };
   for (const [k, n] of [['zielSatz', 'Ziel-Stundensatz'], ['selbstkosten', 'Selbstkostensatz'], ['jahresstunden', 'Jahresstunden'], ['kmSatz', 'km-Satz']]) {
     if (e.nachkalk[k] != null) zahl(e.nachkalk[k], n, 0, 100000, fehler);
@@ -179,6 +183,12 @@ export function pruefeDaten(roh) {
     datum(a?.datum, `${wo}: Datum`, fehler, true);
     datum(a?.gueltigBis, `${wo}: gültig bis`, fehler, true);
     if (a?.stundensatz != null) zahl(a.stundensatz, `${wo}: Stundensatz`, 0, 10000, fehler);
+    if (a?.gewinnProzent != null) zahl(a.gewinnProzent, `${wo}: Gewinnzuschlag`, 0, 1000, fehler);
+    if (a?.rabattH != null) zahl(a.rabattH, `${wo}: Rabatt`, 0, 100000, fehler);
+    (a?.aufgabenTypen ?? []).forEach((t, j) => {
+      if (!t?.id) fehler.push(`${wo}, Aufgaben-Typ ${j + 1}: ID fehlt.`);
+      zahl(t?.minuten, `${wo}, Aufgaben-Typ ${j + 1}: Minuten`, 0, 100000, fehler);
+    });
     if (a && !Array.isArray(a.positionen)) a.positionen = [];
     if (a) zulagenUmstellen(a);
     (a?.zulagen ?? []).forEach((z, j) => {
@@ -191,6 +201,10 @@ export function pruefeDaten(roh) {
       zahl(p?.grundH, `${pw}: Grundstunden`, 0, 100000, fehler);
       if (!['stunden', 'pauschal'].includes(p?.abrechnung)) fehler.push(`${pw}: Abrechnung „${p?.abrechnung}“ unbekannt.`);
       if (p?.pauschalpreis != null) zahl(p.pauschalpreis, `${pw}: Pauschalpreis`, 0, 10000000, fehler);
+      (p?.aufgaben ?? []).forEach((x, k) => {
+        if (!x?.typId) fehler.push(`${pw}, Aufgabe ${k + 1}: Typ fehlt.`);
+        zahl(x?.menge, `${pw}, Aufgabe ${k + 1}: Menge`, 0, 100000, fehler);
+      });
     });
     if (a?.projektId && !projektIds.has(a.projektId)) a.projektId = null;
   });
@@ -243,9 +257,17 @@ export function pruefeDaten(roh) {
   return { ok: fehler.length === 0, fehler, daten: d };
 }
 
-/** Ältere Versionen auf die aktuelle heben. Bei schemaVersion 1 noch nichts zu tun. */
+/** Ältere Versionen auf die aktuelle heben. Das Ergebnis muss auf jedem Gerät gleich sein (Abgleich), also keine neuen IDs. */
 function migriere(d) {
-  // if (d.schemaVersion === 1) { …; d.schemaVersion = 2; }
+  if (d.schemaVersion < 2) {
+    // Gewinn und Rabatt 0, damit sich die Beträge bestehender Angebote nicht ändern
+    for (const a of d.angebote ?? []) {
+      if (!a || typeof a !== 'object') continue;
+      a.aufgabenTypen ??= neueAufgabenTypen();
+      a.gewinnProzent ??= 0;
+      a.rabattH ??= 0;
+    }
+  }
   d.schemaVersion = SCHEMA_VERSION;
   return d;
 }

@@ -11,7 +11,7 @@ import { zusammenfassung, neueId } from '../kern/daten.js';
 import * as kalender from '../kalender.js';
 import * as github from '../github.js';
 import * as lexware from '../lexware.js';
-import { zulagenEditor } from './angebote.js';
+import { zulagenEditor, aufgabenTypenEditor } from './angebote.js';
 import * as abgleich from '../abgleich.js';
 import { unterschiede } from '../kern/abgleich.js';
 import { ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN, euro } from '../kern/abrechnung.js';
@@ -396,6 +396,21 @@ function abrechnungKarte(d) {
     el('div', { class: 'label mit-abstand-gross', id: 'l-zulagen' }, 'Zulagen für neue Angebote'),
     el('p', { class: 'zeile-hinweis' }, 'Wie im Kalkulator. Jedes neue Angebot startet damit, im Angebot änderst du sie einzeln.'),
     el('div', { class: 'mit-abstand-mittel', role: 'group', 'aria-labelledby': 'l-zulagen' }, zulagenEditor(d.einstellungen.angebotZulagen ?? [], (fn) => setze((e) => { e.angebotZulagen ??= []; fn(e.angebotZulagen); }), { prefix: 'ezl', mitErgebnis: false })),
+    el('div', { class: 'label mit-abstand-gross', id: 'l-atypen' }, 'Aufgaben-Typen für neue Angebote'),
+    el('p', { class: 'zeile-hinweis' }, 'Wie im Kalkulator: Minuten je Stück. Im Angebot änderst du sie einzeln.'),
+    el('div', { class: 'mit-abstand-mittel', role: 'group', 'aria-labelledby': 'l-atypen' }, aufgabenTypenEditor(d.einstellungen.angebotAufgabenTypen ?? [], (fn) => setze((e) => { e.angebotAufgabenTypen ??= []; fn(e.angebotAufgabenTypen); }), { prefix: 'eat' })),
+    gewinnZeile(d, setze),
+  ]);
+}
+
+function gewinnZeile(d, setze) {
+  const f = el('input', {
+    class: 'feld zahl satzfeld', type: 'number', min: '0', step: '1', inputmode: 'decimal', value: String(d.einstellungen.angebotGewinnProzent ?? 0), 'aria-label': 'Gewinnzuschlag für neue Angebote in Prozent', 'data-fokus': 'e-gewinn',
+    onchange: () => setze((e) => { const x = Number(f.value.replace(',', '.')); e.angebotGewinnProzent = Number.isFinite(x) && x >= 0 ? x : 0; }),
+  });
+  return el('div', { class: 'zeile ohne-linie umbruch mit-abstand-gross' }, [
+    el('div', { class: 'fuellung' }, [el('div', { class: 'zeile-titel' }, 'Gewinnzuschlag für neue Angebote'), el('div', { class: 'zeile-hinweis' }, 'In jedem Angebot einzeln änderbar')]),
+    el('div', { class: 'knopfreihe eng nowrap' }, [f, el('span', { class: 'zeile-text' }, '%')]),
   ]);
 }
 

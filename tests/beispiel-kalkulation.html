@@ -1,0 +1,19 @@
+<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Kalkulator</title>
+<script>
+(function() {
+  var _s = {"projName":"Alter Stand","projClient":"Alter Kunde","projDate":"2026-01-01","projDesc":"","wage":"10","profitPct":"0","discountH":"0","taskTypes":[{"id":1,"name":"Zeichnungszeit","min":60}],"positions":[{"id":1,"name":"Alt","expanded":true,"rows":[{"typeId":1,"qty":1}]}],"zulagen":[]};
+})();
+</script>
+<script>
+(function() {
+  var _s = {"projName":"Testküche; Musterstraße {12}","projLeader":"Erika Beispiel","projNum":"K-99","projClient":"Musterbau GmbH","projDate":"2026-09-15","projDesc":"Anführung \" und };  im Text","wage":"58","profitPct":"10","discountH":"0","taskTypes":[{"id":1,"name":"Zeichnungszeit","min":60},{"id":2,"name":"Symbol / Stk.","min":10},{"id":3,"name":"Layoutseite","min":120},{"id":4,"name":"Exportseite","min":90}],"taskTypeCounter":5,"positions":[{"id":1,"name":"Position A","expanded":true,"rows":[{"typeId":1,"qty":6},{"typeId":2,"qty":4},{"typeId":3,"qty":3},{"typeId":4,"qty":2}]},{"id":2,"name":"Position B","expanded":false,"rows":[{"typeId":1,"qty":4},{"typeId":2,"qty":2},{"typeId":3,"qty":2},{"typeId":4,"qty":2}]},{"id":3,"name":"Position C","expanded":true,"rows":[{"typeId":1,"qty":2},{"typeId":2,"qty":0},{"typeId":3,"qty":1},{"typeId":4,"qty":1}]}],"positionCounter":3,"zulagen":[{"id":1,"name":"Auftrag anlegen","pct":null,"fixed":1,"on":true,"isFixed":true},{"id":2,"name":"Materialeinstellungen","pct":null,"fixed":1,"on":true,"isFixed":true},{"id":3,"name":"Kommunikation / Mails","pct":3,"on":true,"isFixed":false},{"id":4,"name":"Rücksprachen","pct":8,"on":true,"isFixed":false},{"id":5,"name":"Kalk. Risiko","pct":5,"on":false,"isFixed":false},{"id":6,"name":"Rückläufer / Änderungen","pct":20,"on":true,"isFixed":false}],"zulagenCounter":7};
+  document.addEventListener('DOMContentLoaded', function() { document.getElementById('proj-name').value = _s.projName; });
+})();
+</script>
+</head><body>
+<script>
+function saveProject() {
+  const stateScript = `<script>(function() { var _s = ${JSON.stringify(state)}; })();<\/script>`;
+}
+</script>
+</body></html>

@@ -3,7 +3,7 @@
 
 import { leereDaten, neueId } from './daten.js';
 import { alsText, ausText, plusTage } from './datum.js';
-import { neueZulagen } from './angebot.js';
+import { neueZulagen, neueAufgabenTypen } from './angebot.js';
 
 export function beispielDaten() {
   const d = leereDaten();
@@ -119,7 +119,7 @@ export function beispielDaten() {
   const pos = (bezeichnung, beschreibung, grundH, extra = {}) => ({
     id: neueId(), bezeichnung, beschreibung, grundH, abrechnung: 'stunden', pauschalpreis: null, ...extra,
   });
-  const angebot = (a) => ({ id: neueId(), stundensatz: null, pufferImPreis: true, zulagen: neueZulagen(), kopftext: '', fusstext: '', zahlungsbedingungen: '', projektId: null, angenommenAm: null, lexwareId: null, ...a });
+  const angebot = (a) => ({ id: neueId(), stundensatz: null, pufferImPreis: true, zulagen: neueZulagen(), aufgabenTypen: neueAufgabenTypen(), gewinnProzent: 0, rabattH: 0, kopftext: '', fusstext: '', zahlungsbedingungen: '', projektId: null, angenommenAm: null, lexwareId: null, ...a });
   d.angebote.push(
     angebot({
       nummer: 'AN 26-031', datum: '2026-10-28', gueltigBis: '2026-11-27', kunde: 'Café Rösterei', projektname: 'Entwurfsplanung Café', art: 'Entwurf', status: 'entwurf',
