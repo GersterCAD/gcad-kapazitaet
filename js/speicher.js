@@ -53,6 +53,8 @@ export async function sicherungenListe() {
   return (alle || []).sort((a, b) => b.nr - a.nr);
 }
 
+export const sicherungenLoeschen = () => vorgang('sicherungen', 'readwrite', (s) => s.clear());
+
 export const sicherungLaden = (nr) => vorgang('sicherungen', 'readonly', (s) => s.get(nr));
 
 /** Browser bitten, die Daten nicht von selbst zu löschen (Safari räumt sonst nach 7 Tagen ohne Nutzung auf). */

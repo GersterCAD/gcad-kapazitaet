@@ -931,3 +931,10 @@ a.nk-zeile:hover { color: var(--text); background: var(--leiste); }
   .ap-afg-kopf { display: none; }
 }
 @media (max-width: 1180px) { .ap-zeile > .ap-aufgaben { grid-column: 1 / -1; } }
+
+/* App-Sperre */
+.sperre { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+.sperre-karte { width: 100%; max-width: 400px; }
+.sperre form { display: flex; flex-direction: column; gap: 12px; }
+.sperre .feld { width: 100%; }
+.sperre .meldung:empty { display: none; }

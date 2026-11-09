@@ -12,6 +12,7 @@ import * as kalender from '../kalender.js';
 import * as github from '../github.js';
 import * as lexware from '../lexware.js';
 import { zulagenEditor, aufgabenTypenEditor } from './angebote.js';
+import { sperreKarte } from './sperre.js';
 import * as abgleich from '../abgleich.js';
 import { unterschiede } from '../kern/abgleich.js';
 import { ZUSAMMENFASSEN, STANDARD_ZUSAMMENFASSEN, euro } from '../kern/abrechnung.js';
@@ -51,6 +52,7 @@ export function einstellungen() {
       lexwareKarte(d),
       nachkalkKarte(d),
       kurzbefehleKarte(d),
+      sperreKarte(),
       datenKarte(),
     ]),
   ]);

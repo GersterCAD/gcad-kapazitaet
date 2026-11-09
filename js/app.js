@@ -20,6 +20,8 @@ import * as zustand from './zustand.js';
 import * as kalender from './kalender.js';
 import * as github from './github.js';
 import * as abgleich from './abgleich.js';
+import * as sperre from './sperre.js';
+import { sperrSeite } from './ansichten/sperre.js';
 import * as stoppuhr from './stoppuhr.js';
 import { kopfTimer, mobilTimer } from './ansichten/zeitstopper.js';
 
@@ -173,6 +175,18 @@ function ansichtFuer(pfad) {
 }
 
 function zeigen() {
+  if (sperre.gesperrt()) {
+    // Nur einmal zeichnen, sonst wäre die halb eingegebene PIN weg. Im Sperrbildschirm stehen keine Daten.
+    const app = document.getElementById('app');
+    if (!app.querySelector('.sperre')) {
+      document.title = 'Kapazität';
+      document.body.classList.remove('grau');
+      app.classList.remove('mit-mobil-timer');
+      app.replaceChildren(sperrSeite());
+      app.querySelector('#sperre-pin')?.focus({ preventScroll: true });
+    }
+    return;
+  }
   const pfad = location.hash.replace(/^#\/?/, '') || 'uebersicht';
   const fokus = document.activeElement?.dataset?.fokus;
   const ansicht = ansichtFuer(pfad);
@@ -197,12 +211,14 @@ function zeigen() {
 
 // Kurzbefehle (#/timer/start/…): ausführen, dann die Projektseite zeigen – ohne den Befehl in der Verlaufsliste
 async function kurzbefehl() {
+  if (sperre.gesperrt()) return false;                 // läuft nach dem Entsperren
   const ziel = await stoppuhr.befehl(location.hash.replace(/^#\/?/, ''));
   if (ziel) history.replaceState(null, '', ziel);
   return !!ziel;
 }
 
 window.addEventListener('hashchange', async () => {
+  if (sperre.gesperrt()) return;
   if (await kurzbefehl()) { zeigen(); return; }
   formularVergessen();
   anfrageVergessen(location.hash.replace(/^#\/?/, ''));
@@ -216,8 +232,20 @@ zustand.abonnieren(zeigen);
 kalender.abonnieren(zeigen);
 abgleich.abonnieren(zeigen);
 lexware.abonnieren(zeigen);
+
+// Hintergrund (Kalender, Abgleich, Lexware) läuft erst, wenn die App entsperrt ist
+let gestartet = false;
+async function loslegen() {
+  if (gestartet) { kalender.abgleichen(); abgleich.abgleichen(); lexware.abgleichen(); } else {
+    gestartet = true;
+    kalender.automatisch(); abgleich.automatisch(); stoppuhr.ticken(); lexware.abgleichen(); lexware.beobachten();
+  }
+  await kurzbefehl();
+}
+sperre.abonnieren(async () => { if (!sperre.gesperrt()) await loslegen(); zeigen(); });
 Promise.all([zustand.starten(), github.starten(), kalender.starten(), abgleich.starten(), lexware.starten()])
-  .then(async () => { kalender.automatisch(); abgleich.automatisch(); stoppuhr.ticken(); lexware.abgleichen(); lexware.beobachten(); await kurzbefehl(); })
+  .then(() => sperre.starten())
+  .then(async () => { sperre.beobachten(); if (!sperre.gesperrt()) await loslegen(); })
   .catch((f) => console.error('Daten konnten nicht geladen werden:', f))
   .finally(zeigen);
 

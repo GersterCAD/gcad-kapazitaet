@@ -1,15 +1,28 @@
 // Zugang zum privaten Daten-Repo über die GitHub-API. Der Token bleibt nur auf diesem Gerät (IndexedDB, meta).
 // Er braucht nur Lese- und Schreibrecht auf dieses eine Repo (Fine-grained-Token). Öffentliche Repos werden abgelehnt.
+// Ist die App-Sperre an (sperre.js), liegt er nur verschlüsselt dort und ist hier nur im Speicher, solange entsperrt.
 
 import * as speicher from './speicher.js';
 
 export const STANDARD_REPO = 'GersterCAD/gcad-kapazitaet-daten';
 const API = 'https://api.github.com';
 
-let zugang = null; // { repo, token }
+let zugang = null; // { repo, token } oder bei gesperrter App { repo, gesichert: true }
+let schutz = null;  // von sperre.js: (token) => Promise, legt den Token verschlüsselt ab
 
 export async function starten() { zugang = (await speicher.metaLaden('github')) ?? null; }
 export const verbunden = () => !!zugang?.token;
+export const token = () => zugang?.token ?? null;
+export const schutzSetzen = (f) => { schutz = f; };
+export function tokenSetzen(t) { if (zugang) zugang = { ...zugang, token: t ?? undefined }; }
+
+/** Zugang speichern: mit App-Sperre ohne Token (der liegt dann im Tresor) */
+export async function neuAblegen() {
+  if (schutz && zugang) {
+    await schutz(zugang.token);
+    await speicher.metaSpeichern('github', { repo: zugang.repo, gesichert: true });
+  } else await speicher.metaSpeichern('github', zugang);
+}
 export const repo = () => zugang?.repo ?? STANDARD_REPO;
 
 function kopf(token = zugang?.token, art = 'application/vnd.github+json') {
@@ -33,10 +46,14 @@ export async function verbinden(repoName, token) {
   const info = await antwort.json();
   if (!info.private) throw new Error('Dieses Repo ist öffentlich. Deine Daten gehören nur in ein privates Repo.');
   zugang = { repo: name, token: token.trim() };
-  await speicher.metaSpeichern('github', zugang);
+  await neuAblegen();
 }
 
-export async function trennen() { zugang = null; await speicher.metaSpeichern('github', null); }
+export async function trennen() {
+  zugang = null;
+  if (schutz) await schutz(null);
+  await speicher.metaSpeichern('github', null);
+}
 
 /** Datei als Text holen. Gibt null zurück, wenn es sie (noch) nicht gibt. */
 export async function dateiHolen(pfad) {

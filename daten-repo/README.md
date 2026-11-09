@@ -23,6 +23,10 @@ Hier liegen **keine Daten**, nur die Vorlage für das private Repo. Die echten D
 6. Einen **Fine-grained-Token** anlegen (GitHub → Settings → Developer settings → Personal access tokens → Fine-grained):
    nur Repo `gcad-kapazitaet-daten`, Berechtigung *Contents: Read and write*. Den Token in der App unter Einstellungen → Daten → „Abgleich über GitHub“ eintragen – auf jedem Gerät einmal. Er bleibt nur auf dem Gerät.
 
+## Festgenagelter Code
+
+Die Abläufe laden den Code aus dem öffentlichen Repo nicht vom neuesten Stand, sondern von einem geprüften Commit (`ref:` in `kalender.yml` und `lexware.yml`). Eine spätere Änderung läuft also nicht automatisch mit den Secrets. Soll neuer Code laufen, wird `ref:` nach Prüfung und Freigabe von Hand nachgezogen.
+
 ## Was die Action macht
 
 `app/daten-repo/kalender-holen.mjs` holt die Kalender, löst Serientermine für 60 Tage zurück bis 400 Tage voraus auf und schreibt `kalender.json`. Sie speichert nur, wenn sich etwas geändert hat. Fällt ein Kalender aus, bleibt sein letzter Stand erhalten.
