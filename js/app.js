@@ -203,7 +203,9 @@ function zeigen() {
     : null;
   document.body.classList.toggle('grau', !!ansicht.grau);
   const inhalt = el('main', { class: `inhalt${ansicht.schmal ? ' schmal' : ''}${ansicht.voll ? ' voll' : ''}${ansicht.grau ? ' auftrag' : ''}`, id: 'inhalt', tabindex: '-1' }, [band, ansicht.inhalt]);
-  app.replaceChildren(kopfzeile(ansicht), navigation(ansicht.bereich), inhalt, mobilTimer(pfad) ?? '');
+  // Am iPhone keine Timer-Leiste, wo unten schon eine feste Aktion steht (iPhone.dc.html), sonst verdeckt sie den Knopf
+  const festeAktion = inhalt.querySelector('.mobil-aktion');
+  app.replaceChildren(kopfzeile(ansicht), navigation(ansicht.bereich), inhalt, (festeAktion ? null : mobilTimer(pfad)) ?? '');
   app.classList.toggle('mit-mobil-timer', !!app.querySelector('.mobil-timer'));
   // Nach dem Neuzeichnen den Fokus zurück auf denselben Knopf (wichtig für Tastatur und Vorlesen)
   if (fokus) app.querySelector(`[data-fokus="${CSS.escape(fokus)}"]`)?.focus({ preventScroll: true });
