@@ -18,6 +18,7 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026, Folge-Entwurf Index B vom 
 - Oberfläche und alle Texte Deutsch, per Du, kurze Sätze.
 - Umsetzung in 8 Schritten (siehe Anweisung). Nach jedem Schritt kurz zusammenfassen und auf Joachims Freigabe warten.
 - Keine eigene Gestaltung, die vom Entwurf abweicht. Verbesserungen kommen später aus der Nutzung.
+- **Jede bewusste Abweichung wird dort dokumentiert, wo der Entwurf liegt** (Joachims Regel vom 21.11.2026): `…/03_Design/26-10-28_Claude-Design_Index-B/Abweichungen_Index-B.md`. Sonst meldet jede spätere Prüfung Entschiedenes wieder als offen.
 - **Keine Daten in diesem Repo.** Es ist öffentlich (GitHub Pages). Kundennamen und Stunden nie committen, auch nicht in Beispieldaten mit echten Namen. Echte Daten nur im Browser (IndexedDB), in `kapazitaet-daten.json` (Export, per `.gitignore` ausgeschlossen) und im privaten Repo `gcad-kapazitaet-daten`.
 - Nie automatisch Samstage oder lange Tage einplanen – immer nur als Vorschlag.
 - Kein Werk.ai-Code. Keine fremden Schriften oder CDN-Bibliotheken, wenn es ohne geht.
@@ -38,6 +39,9 @@ Design-Vorlage: Claude Design Index A vom 27.10.2026, Folge-Entwurf Index B vom 
 - `js/austausch.js`: Export `kapazitaet-daten.json` (legt vorher automatisch eine Sicherung im Browser an), Import nur nach erfolgreicher Prüfung, alter Stand wird vorher gesichert.
 - Beispieldaten: `js/kern/beispiel.js`, nur erfundene Namen. Beim allerersten Start aktiv, in Einstellungen → Daten abschaltbar. Kopfzeile zeigt dann den Chip „Beispieldaten“.
 - Tests: `npm test` (Node, keine Abhängigkeiten).
+  - Keine Tagesstände behaupten: Tests prüfen Verhalten, nicht die Zahl des Tages (kein `new Date()`, fester `heute`). Wird eine Zahl geprüft, steht im Kommentar, woher sie kommt.
+  - Gegenprobe bei neuen Tests: zwei absichtliche Fehler in eine Kopie des Moduls einbauen – die Reihe muss rot werden.
+  - Befunde über echte Daten an der Quelle prüfen (privates Repo, aktueller Stand), nicht an einer Kopie.
 
 ## Rechenkern (`js/kern/`, Einstieg `index.js`)
 
@@ -146,6 +150,13 @@ Reihenfolge: 1. Nachtrag beim Timer + Wochenstart/-abschluss · 2. Zahlungen aus
 
 - **App-Sperre mit PIN** (`js/kern/pin.js`, `js/sperre.js`, `js/ansichten/sperre.js`, Karte in den Einstellungen): je Gerät, 6–12 Ziffern. Ist sie an, liegt der GitHub-Token nur im Tresor (`meta.sperre`, PBKDF2 600.000 Runden + AES-GCM), `meta.github` hat dann nur `{ repo, gesichert: true }`. Sperrt nach 5/15/30/60 Min. ohne Nutzung (Standard 30) und spätestens einmal am Tag, nicht bei jedem Start: Bis dahin liegt der nicht auslesbare Schlüssel in `meta.sperreSitzung`. Gesperrt zeigt `zeigen()` nur den Sperrbildschirm, Hintergrundabgleiche und Kurzbefehle warten. Ab 5 Fehlversuchen Wartezeit. „PIN vergessen“ löscht Zugang und alle Daten des Geräts (das private Repo bleibt). Die Planungsdaten im Browser sind nicht verschlüsselt.
 - **Action-Code festgenagelt:** `daten-repo/lexware.yml` und `kalender.yml` holen dieses Repo mit `ref:` auf einen geprüften Commit, `actions/checkout` und `setup-node` auf Commit-SHA. Ändert sich `daten-repo/*.mjs` oder `js/kern/ics.js`, muss `ref:` in beiden Dateien nachgezogen und im privaten Repo aktualisiert werden – nur nach Joachims Freigabe.
+
+## Index B nachziehen (ab 21.11.2026)
+
+- Abgleich aller Boards: `03_Design/26-11-21_Index-B_Stand-der-Umsetzung.pdf` (Arbeitsliste in 8 Schritten, 30 offene Fragen). A8 Kunden erst, wenn echte Lexware-Kontakte durchgelaufen sind (Kundennummer aus `roles.customer.number`): Kundenstamm = Lexware, je Kunde Lexware-`id` und Kundennummer, in der App nur der Stundensatz.
+- **Verkaufte Stunden** (`verkaufteStunden()` in `js/kern/angebot.js`): geplante Stunden der übernommenen Angebotspositionen + vergütete Nachträge und Regie. Projektformular: „Summe x h“ und Chip „x h über Angebot“, darunter immer die Herkunft „verkauft x h = Angebot … + Nachträge … + Regie …“ (`verkaufteStundenTeile()`, Auflage 22.11.2026; Abweichung vom Board, dokumentiert).
+- **Zeitstopper gestoppt nach Timer.dc**: „Gebucht“, Spanne, „Gemessen … gerundet auf …“, Rückgängig, Bearbeiten (`eintragAendern()` in `js/kern/timer.js`, nicht bei abgerechneten Einträgen), Neu starten. Notizfeld im Zustand bereit.
+- iPhone: keine Timer-Leiste, wo `.mobil-aktion` steht (`js/app.js`).
 
 ## Zeitstopper (ersetzt Tyme)
 

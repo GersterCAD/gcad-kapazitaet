@@ -938,3 +938,6 @@ a.nk-zeile:hover { color: var(--text); background: var(--leiste); }
 .sperre form { display: flex; flex-direction: column; gap: 12px; }
 .sperre .feld { width: 100%; }
 .sperre .meldung:empty { display: none; }
+
+/* Zeitstopper gestoppt (Timer.dc.html): gebuchte Spanne groß */
+.timer-spanne { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }

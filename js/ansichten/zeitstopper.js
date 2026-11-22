@@ -4,7 +4,7 @@
 import { el, zahlText, hakenIcon } from '../ui.js';
 import * as zustand from '../zustand.js';
 import * as stoppuhr from '../stoppuhr.js';
-import { laufzeit, dauerText, dauerKurz, dauerLang, vergessen, endeVorschlag, stundenBis } from '../kern/timer.js';
+import { laufzeit, dauerText, dauerKurz, dauerLang, vergessen, endeVorschlag, stundenBis, minutenAus, dauerWorte } from '../kern/timer.js';
 import { alsText, ausText, plusTage, tagKurz } from '../kern/datum.js';
 import { abrechnungUeberblick } from '../kern/abrechnung.js';
 import { nachtraege } from '../kern/nachtrag.js';
@@ -121,12 +121,12 @@ export function zuletztText(z) {
 // ---------- Karte auf der Projektseite ----------
 
 // Zustand, der beim Neuzeichnen erhalten bleibt
-let karte = { projektId: null, wechseln: false, ende: null, nachtrag: false, ntNr: null, ntText: '' };
+let karte = { projektId: null, wechseln: false, ende: null, nachtrag: false, ntNr: null, ntText: '', notiz: '', bearbeiten: false, fehler: '' };
 const ntZu = () => { karte.nachtrag = false; karte.ntNr = null; karte.ntText = ''; };
 
 /** s.pos = gewählte Position der Projektseite (wird mit der manuellen Buchung geteilt) */
 export function timerKarte(d, p, s) {
-  if (karte.projektId !== p.id) karte = { projektId: p.id, wechseln: false, ende: null, nachtrag: false, ntNr: null, ntText: '' };
+  if (karte.projektId !== p.id) karte = { projektId: p.id, wechseln: false, ende: null, nachtrag: false, ntNr: null, ntText: '', notiz: '', bearbeiten: false, fehler: '' };
   const t = d.timer;
   const hier = t && t.projektId === p.id;
   const pos = (nr) => p.positionen.find((x) => x.nr === nr);
@@ -186,18 +186,20 @@ export function timerKarte(d, p, s) {
     ]);
   }
 
-  // Gerade gestoppt (mit Rückgängig)
+  // Gerade gestoppt (Timer.dc.html: gemessen und gerundet, Rückgängig, Bearbeiten; dazu „Neu starten“ aus Projektseite.dc.html)
   const l = stoppuhr.letzteBuchung();
   if (l && (l.eintraege.some((z) => z.projektId === p.id) || (!l.eintraege.length && l.timer?.projektId === p.id))) {
     const e = l.eintraege;
     const summe = e.reduce((a, z) => a + z.stunden, 0);
+    const gemessen = e.reduce((a, z) => a + (minutenAus(z.bis) ?? 0) - (minutenAus(z.von) ?? 0), 0);
     const pauschal = abrechnungUeberblick(d, p).art === 'pauschal';
     return el('section', { class: 'timerkarte', 'aria-labelledby': 'h-timer' }, [
       kopf(),
       el('div', { class: 'timerkarte-reihe' }, [
         el('div', { class: 'timerkarte-links', role: 'status' }, e.length ? [
-          el('span', { class: 'chip gruen gross' }, [hakenIcon(12), `Gebucht: ${zahlText(summe, 2)} h (${e[0].von}–${e[e.length - 1].bis})`]),
-          el('div', { class: 'zeile-hinweis' }, `${e[0].positionNr ? `Pos. ${e[0].positionNr} · ` : ''}${pauschal && pos(e[0].positionNr)?.typ !== 'nachtrag' ? 'zählt jetzt zum Ist' : 'steht jetzt unter „Offen zur Abrechnung“'}`),
+          el('span', { class: 'chip gruen gross' }, [hakenIcon(12), `Gebucht: ${zahlText(summe, 2)} h`]),
+          el('div', { class: 'timer-spanne zahl' }, `${e[0].von}–${e[e.length - 1].bis}`),
+          el('div', { class: 'zeile-hinweis' }, `Gemessen ${dauerWorte(gemessen)}, gerundet auf ${zahlText(summe, 2)} h${e[0].positionNr ? ` · Pos. ${e[0].positionNr}` : ''} · ${pauschal && pos(e[0].positionNr)?.typ !== 'nachtrag' ? 'zählt zum Ist' : 'offen zur Abrechnung'}`),
         ] : [el('div', { class: 'zeile-text' }, 'Unter einer Minute, nichts gebucht.')]),
         el('div', { class: 'knopfreihe eng' }, [
           e.length && pos(e[0].positionNr)?.typ !== 'nachtrag' ? el('button', {
@@ -205,12 +207,17 @@ export function timerKarte(d, p, s) {
             onclick: () => { karte.nachtrag = !karte.nachtrag; zustand.neuZeichnen(); },
           }, 'War Nachtrag') : null,
           el('button', { type: 'button', class: 'pille gross', 'data-fokus': 'timer-zurueck', onclick: () => stoppuhr.rueckgaengig() }, e.length ? 'Rückgängig' : 'Weiterlaufen lassen'),
+          e.length === 1 ? el('button', {
+            type: 'button', class: 'textknopf', 'aria-expanded': String(karte.bearbeiten), 'data-fokus': 'timer-bearbeiten',
+            onclick: () => { karte.bearbeiten = !karte.bearbeiten; karte.fehler = ''; zustand.neuZeichnen(); },
+          }, 'Bearbeiten') : null,
           el('button', {
             type: 'button', class: 'pille gross haupt', 'data-fokus': 'timer-neu',
             onclick: () => { stoppuhr.vergessen(); stoppuhr.starten(p.id, s.pos); },
           }, 'Neu starten'),
         ]),
       ]),
+      karte.bearbeiten && e.length === 1 ? bearbeitenBereich(p, e[0]) : null,
       karte.nachtrag && e.length ? nachtragBereich(p, {
         frage: `Die ${zahlText(summe, 2)} h auf einen Nachtrag umbuchen. Ohne Preis wird er nach Stunden abgerechnet.`,
         knoepfe: (wahl) => [el('button', {
@@ -236,11 +243,21 @@ export function timerKarte(d, p, s) {
           onclick: () => { karte.nachtrag = !karte.nachtrag; zustand.neuZeichnen(); },
         }, '+ Nachtrag'))) : null,
         p0 ? el('div', { class: 'zeile-text' }, `Pos. ${p0.nr} · ${p0.bezeichnung}`) : el('div', { class: 'zeile-text' }, 'Projekt ohne Positionen'),
+        karte.nachtrag ? null : (() => {
+          const notiz = el('input', {
+            class: 'feld', type: 'text', value: karte.notiz, placeholder: 'Notiz (optional)', 'aria-label': 'Notiz', 'data-fokus': 'timer-notiz',
+            oninput: () => { karte.notiz = notiz.value; },
+          });
+          return notiz;
+        })(),
         anderes ? el('div', { class: 'zeile-hinweis' }, [
           'Gerade läuft ', el('a', { href: `#/projekte/${anderes.id}` }, anderes.name), ' (', el('span', { class: 'zahl', 'data-timer-lauf': 'kurz' }, dauerKurz(laufzeit(t))), '). Starten bucht die Zeit dort.',
         ]) : null,
       ]),
-      karte.nachtrag ? null : el('button', { type: 'button', class: 'knopf-timer haupt', 'data-fokus': 'timer-start', onclick: () => stoppuhr.starten(p.id, s.pos) }, [playIcon(), 'Timer starten']),
+      karte.nachtrag ? null : el('button', {
+        type: 'button', class: 'knopf-timer haupt', 'data-fokus': 'timer-start',
+        onclick: () => { const n = karte.notiz.trim(); karte.notiz = ''; stoppuhr.starten(p.id, s.pos, n); },
+      }, [playIcon(), 'Timer starten']),
     ]),
     karte.nachtrag ? nachtragBereich(p, {
       frage: 'Der Kunde hat etwas geändert? Starte den Timer direkt auf einem Nachtrag. Ohne Preis wird er nach Stunden abgerechnet.',
@@ -251,6 +268,36 @@ export function timerKarte(d, p, s) {
     }) : null,
   ]);
 }
+
+// Gerade gebuchten Eintrag ändern: von–bis, Position, Notiz. Die Stunden rundet der Kern neu.
+function bearbeitenBereich(p, z) {
+  const von = el('input', { class: 'feld zahl', type: 'time', value: z.von, 'aria-label': 'von', 'data-fokus': 'tb-von' });
+  const bis = el('input', { class: 'feld zahl', type: 'time', value: z.bis === '24:00' ? '23:59' : z.bis, 'aria-label': 'bis', 'data-fokus': 'tb-bis' });
+  const pos = el('select', { class: 'feld', 'aria-label': 'Position', 'data-fokus': 'tb-pos' }, [
+    el('option', { value: '', selected: !z.positionNr }, 'ohne Position'),
+    ...p.positionen.map((x) => el('option', { value: x.nr, selected: x.nr === z.positionNr }, `Pos. ${x.nr} · ${x.bezeichnung}`)),
+  ]);
+  const notiz = el('input', { class: 'feld', type: 'text', value: z.notiz ?? '', placeholder: 'Notiz (optional)', 'aria-label': 'Notiz', 'data-fokus': 'tb-notiz' });
+  return el('div', { class: 'kachel klein formular mit-abstand-mittel' }, [
+    el('div', { class: 'feldpaar' }, [feld('von', von), feld('bis', bis)]),
+    feld('Position', pos),
+    feld('Notiz', notiz),
+    karte.fehler ? el('div', { class: 'meldung rot', role: 'alert' }, karte.fehler) : null,
+    el('div', { class: 'knopfreihe' }, [
+      el('button', {
+        type: 'button', class: 'pille haupt', 'data-fokus': 'tb-speichern',
+        onclick: async () => {
+          const f = await stoppuhr.bearbeiten(z.id, { von: von.value, bis: bis.value, positionNr: pos.value, notiz: notiz.value });
+          karte.fehler = f ?? '';
+          if (!f) karte.bearbeiten = false;
+          zustand.neuZeichnen();
+        },
+      }, 'Speichern'),
+      el('button', { type: 'button', class: 'pille leise', 'data-fokus': 'tb-abbrechen', onclick: () => { karte.bearbeiten = false; karte.fehler = ''; zustand.neuZeichnen(); } }, 'Abbrechen'),
+    ]),
+  ]);
+}
+const feld = (label, eingabe) => el('label', { class: 'feldgruppe' }, [el('span', { class: 'feld-label' }, label), eingabe]);
 
 // Nachtrag wählen: vorhandenen antippen oder neuen beschreiben. knoepfe(wahl) bekommt eine Funktion, die die Wahl liefert.
 function nachtragBereich(p, { frage, knoepfe, dunkel = false }) {

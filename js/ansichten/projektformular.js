@@ -8,6 +8,7 @@ import { lernwert } from '../kern/lernwert.js';
 import { ABRECHNUNGSART, kundeVon, euro } from '../kern/abrechnung.js';
 import { empfohlenerPuffer } from './projekt.js';
 import { loeschKnopf } from './einstellungen.js';
+import { verkaufteStundenTeile } from '../kern/angebot.js';
 
 const FARBEN = ['#445F6E', '#7C93A0', '#B4C3CC'];
 const PRIO = [[1, 'hoch'], [2, 'normal'], [3, 'niedrig']];
@@ -135,6 +136,30 @@ export function projektformular(id = null) {
     f.positionen.push({ nr: String((nrs.length ? Math.max(...nrs) : 0) + 1), bezeichnung: '', sollH, alt: null });
     neu();
   };
+  // Summe der Positionen; bei Projekten aus einem Angebot der Vergleich mit den verkauften Stunden
+  // (ProjektForm.dc.html zeigt „x h über Soll“ – hier gegen das Angebot, weil das Soll nach der Regel aus Schritt 4
+  // immer der Summe folgt; Nachträge zählen zu den verkauften Stunden. Entscheidung vom 21.11.2026)
+  const summeZeile = el('div', { class: 'knopfreihe eng mit-abstand-mittel', role: 'status' });
+  // Herkunft der verkauften Stunden steht immer darunter (Auflage vom 22.11.2026), damit Stunden,
+  // die als Nachtrag oder Regie gedeckt sind, auch dann sichtbar bleiben, wenn der Chip schweigt.
+  const herkunftZeile = el('p', { class: 'zeile-hinweis zahl' });
+  const zeigeSumme = () => {
+    const sum = f.positionen.reduce((a, y) => a + (Number(y.sollH) || 0), 0);
+    const t = p ? verkaufteStundenTeile(d, p, f.positionen) : null;
+    const ueber = t == null ? 0 : Math.round((sum - t.summe) * 10) / 10;
+    summeZeile.replaceChildren(
+      el('span', { class: 'zeile-text zahl' }, `Summe ${zahlText(sum)} h`),
+      ueber > 0 ? el('span', { class: 'chip gelb' }, `${zahlText(ueber)} h über Angebot`) : '',
+    );
+    herkunftZeile.hidden = !t;
+    if (t) {
+      const teile = [`Angebot ${zahlText(t.angebot)}`];
+      if (t.nachtrag) teile.push(`Nachträge ${zahlText(t.nachtrag)}`);
+      if (t.regie) teile.push(`Regie ${zahlText(t.regie)}`);
+      herkunftZeile.textContent = `verkauft ${zahlText(t.summe)} h = ${teile.join(' + ')}`;
+    }
+  };
+  zeigeSumme();
   const kartePositionen = el('section', { class: 'karte ganze-breite', 'aria-labelledby': 'h-pp' }, [
     el('div', { class: 'kartenkopf' }, [
       el('h2', { id: 'h-pp', class: 'fuellung' }, 'Positionen'),
@@ -153,7 +178,7 @@ export function projektformular(id = null) {
               oninput: () => {
                 x.sollH = h.value;
                 const sum = f.positionen.reduce((a, y) => a + (Number(y.sollH) || 0), 0);
-                schaetzung.value = String(sum); zeigeSoll();
+                schaetzung.value = String(sum); zeigeSoll(); zeigeSumme();
               },
             });
             // Art für die Nachkalkulation: Auftrag, Nachtrag (vergütet oder nicht), Regie, abgelehnt
@@ -172,6 +197,8 @@ export function projektformular(id = null) {
               onclick: () => { f.positionen.splice(i, 1); neu(); },
             }, [kreuzIcon()])]);
           }),
+          summeZeile,
+          herkunftZeile,
         ])
       : el('p', { class: 'zeile-hinweis' }, 'Optional. Mit Positionen siehst du Soll-Ist je Position und buchst Zeit darauf.'),
   ]);

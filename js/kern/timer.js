@@ -28,6 +28,20 @@ export function dauerText(ms) {
   return `${Math.floor(s / 3600)}:${zwei(Math.floor((s % 3600) / 60))}:${zwei(s % 60)}`;
 }
 
+/** „08:52“ → Minuten seit Mitternacht, sonst null. „24:00“ ist erlaubt (Ende eines Tages). */
+export function minutenAus(uhrzeit) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(uhrzeit ?? '');
+  if (!m || Number(m[2]) > 59) return null;
+  const min = Number(m[1]) * 60 + Number(m[2]);
+  return min <= 1440 ? min : null;
+}
+
+/** Gemessene Zeit in Worten: „1 h 23 min“ */
+export function dauerWorte(minuten) {
+  const m = Math.round(minuten), h = Math.floor(m / 60), r = m % 60;
+  return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`;
+}
+
 /** Stunden runden: auf die nächste Rundungsstufe, mindestens eine Stufe */
 export function runden(minuten, stufe = STANDARD_RUNDUNG) {
   if (minuten < MIN_MINUTEN) return 0;
@@ -62,6 +76,24 @@ export function timerStoppen(daten, jetzt = new Date(), { ende } = {}) {
   }
   daten.zeiteintraege.push(...neu);
   return neu;
+}
+
+/**
+ * Zeiteintrag nachträglich ändern (ändert daten): von/bis, Position, Notiz. Die Stunden kommen neu aus von–bis
+ * mit derselben Rundung wie beim Stoppen. Gibt einen Fehlertext zurück oder null, wenn es geklappt hat.
+ */
+export function eintragAendern(daten, id, { von, bis, positionNr = null, notiz = '' }) {
+  const z = daten.zeiteintraege.find((x) => x.id === id);
+  if (!z) return 'Den Eintrag gibt es nicht mehr.';
+  if (z.rechnungId || z.abgerechnet) return 'Der Eintrag ist schon abgerechnet und lässt sich nicht mehr ändern.';
+  const a = minutenAus(von), b = minutenAus(bis);
+  if (a == null || b == null || b <= a) return 'Bitte von und bis prüfen: bis muss nach von liegen.';
+  const zwei = (x) => `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
+  Object.assign(z, {
+    von: zwei(a), bis: zwei(b), stunden: runden(b - a, daten.einstellungen.timerRundung ?? STANDARD_RUNDUNG),
+    positionNr: positionNr || null, notiz: (notiz ?? '').trim(),
+  });
+  return null;
 }
 
 /** Kurz für die Kopfzeile: „01:24“ (Stunden:Minuten), lang auf der Projektseite: „01:24:10“ */

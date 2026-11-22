@@ -240,6 +240,33 @@ export function angebotAnnehmen(daten, angebotId, { positionIds, start = '', dea
   return id;
 }
 
+/**
+ * Verkaufte Stunden eines Projekts aus einem Angebot: geplante Stunden der übernommenen Angebotspositionen
+ * plus vergütete Nachträge und Regie (Joachims Entscheidung vom 21.11.2026: Nachträge zählen zu den verkauften Stunden).
+ * Abgelehnte Positionen zählen nicht. null, wenn das Projekt nicht aus einem Angebot kommt.
+ */
+export function verkaufteStunden(daten, projekt, positionen = projekt?.positionen ?? []) {
+  return verkaufteStundenTeile(daten, projekt, positionen)?.summe ?? null;
+}
+
+/**
+ * Herkunft der verkauften Stunden (Auflage vom 22.11.2026: der Chip nennt seine Grundlage, damit z. B. als Regie
+ * geparkte Stunden sichtbar bleiben): { angebot, nachtrag, regie, summe } oder null ohne Angebot.
+ */
+export function verkaufteStundenTeile(daten, projekt, positionen = projekt?.positionen ?? []) {
+  const a = (daten.angebote ?? []).find((x) => x.id === projekt?.angebotId);
+  if (!a) return null;
+  const t = { angebot: 0, nachtrag: 0, regie: 0 };
+  for (const x of positionen) {
+    if (x.status === 'abgelehnt') continue;
+    const ap = x.angebotPositionId ? a.positionen.find((y) => y.id === x.angebotPositionId) : null;
+    if (ap) t.angebot += runde1(geplantH(ap, a));
+    else if (['nachtrag', 'regie'].includes(x.typ) && (x.status ?? 'verguetet') === 'verguetet') t[x.typ] += Number(x.sollH) || 0;
+  }
+  for (const k of Object.keys(t)) t[k] = runde2(t[k]);
+  return { ...t, summe: runde2(t.angebot + t.nachtrag + t.regie) };
+}
+
 /** Einplanen zurücknehmen, solange noch keine Zeit gebucht ist (ändert daten). Gibt true zurück, wenn es ging. */
 export function annahmeZuruecknehmen(daten, angebotId) {
   const a = daten.angebote.find((x) => x.id === angebotId);

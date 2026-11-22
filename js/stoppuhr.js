@@ -3,7 +3,7 @@
 
 import * as zustand from './zustand.js';
 import { nachtragAnlegen, umbuchen } from './kern/nachtrag.js';
-import { timerStarten, timerStoppen, timerVerwerfen, zuletztBenutzt, laufzeit, dauerText, dauerKurz, dauerLang } from './kern/timer.js';
+import { timerStarten, timerStoppen, timerVerwerfen, zuletztBenutzt, laufzeit, dauerText, dauerKurz, dauerLang, eintragAendern } from './kern/timer.js';
 
 let letzte = null; // { eintraege, timer } – für „Rückgängig“ nach dem Stoppen
 
@@ -40,6 +40,16 @@ export async function rueckgaengig() {
     d.zeiteintraege = d.zeiteintraege.filter((z) => !ids.has(z.id));
     if (l.timer && !d.timer) d.timer = l.timer;
   });
+}
+
+/** Gerade gebuchten Eintrag ändern („Bearbeiten“). Gibt einen Fehlertext zurück oder null. */
+export async function bearbeiten(id, werte) {
+  let fehler = null;
+  await zustand.aendern((d) => {
+    fehler = eintragAendern(d, id, werte);
+    if (!fehler && letzte) letzte = { ...letzte, eintraege: letzte.eintraege.map((z) => (z.id === id ? { ...d.zeiteintraege.find((x) => x.id === id) } : z)) };
+  });
+  return fehler;
 }
 
 /** Vergessenen Timer verwerfen, ohne zu buchen */
