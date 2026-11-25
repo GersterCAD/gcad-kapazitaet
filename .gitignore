@@ -2,3 +2,8 @@
 kapazitaet-daten*.json
 *.ics
 .DS_Store
+
+# Zugangsdaten und Abhängigkeiten nie ins öffentliche Repo
+.env
+.env.*
+node_modules/
