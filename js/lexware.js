@@ -7,6 +7,8 @@ import * as github from './github.js';
 import * as zustand from './zustand.js';
 import { rechnungStatus, lexwareRechnung, zahlungenUebernehmen } from './kern/rechnung.js';
 import { lexwareAngebot } from './kern/angebot.js';
+import { zuordnen, zuordnungPruefen, kontaktIdFuer } from './kern/kunden.js';
+import { beispielKontakte } from './kern/beispiel.js';
 
 const ORDNER = 'lexware';
 const PRUEFEN_MS = 15000;
@@ -22,7 +24,8 @@ export const abonnieren = (f) => { hoerer.add(f); return () => hoerer.delete(f);
 export const info = () => stand;
 /** Bereit: GitHub verbunden und die Action hat den Schlüssel erfolgreich geprüft */
 export const verbunden = () => github.verbunden() && !zustand.istBeispiel() && !!stand.status?.verbunden;
-export const kontakte = () => stand.kontakte;
+/** Lexware-Kontakte (Schnappschuss der Action); mit Beispieldaten erfundene */
+export const kontakte = () => (zustand.istBeispiel() ? beispielKontakte() : stand.kontakte);
 /** Alle Rechnungen in Lexware mit Zahlungsstand (auch die, die nicht aus der App kommen) */
 export const zahlungen = () => stand.zahlungen ?? [];
 export const zahlungenAbgeholt = () => stand.zahlungenAbgeholt ?? null;
@@ -32,7 +35,9 @@ export const laeuft = (typ, id) => Object.values(stand.auftraege).find((a) => a.
 export const dauertLange = (a) => a && Date.now() - Date.parse(a.gesendet) > DAUERT_MS;
 
 /** Link in Lexware Office */
-export const link = (typ, lexwareId) => `https://app.lexoffice.de/permalink/${typ === 'angebot' ? 'quotations' : 'invoices'}/edit/${lexwareId}`;
+export const link = (typ, lexwareId) => (typ === 'kontakt'
+  ? `https://app.lexoffice.de/permalink/contacts/view/${lexwareId}`
+  : `https://app.lexoffice.de/permalink/${typ === 'angebot' ? 'quotations' : 'invoices'}/edit/${lexwareId}`);
 
 export async function starten() {
   stand = { ...stand, ...((await speicher.metaLaden('lexware')) ?? {}) };
@@ -46,7 +51,7 @@ export async function abgleichen() {
     const s = await github.dateiHolen(`${ORDNER}/status.json`);
     stand.status = s ? JSON.parse(s) : null;
     const k = await github.dateiHolen(`${ORDNER}/kontakte.json`);
-    if (k) { const j = JSON.parse(k); stand.kontakte = j.kontakte ?? []; stand.kontakteAbgeholt = j.abgeholt ?? null; }
+    if (k) { const j = JSON.parse(k); stand.kontakte = j.kontakte ?? []; stand.kontakteAbgeholt = j.abgeholt ?? null; await kundenZuordnen(); }
     await zahlungenLesen();
     stand.fehler = null;
   } catch (f) { stand.fehler = f.message; }
@@ -66,11 +71,22 @@ async function zahlungenLesen() {
   if (zahlungenUebernehmen(probe, stand.zahlungen)) await zustand.aendern((x) => { zahlungenUebernehmen(x, stand.zahlungen); });
 }
 
-/** Kontakt-ID zum Kundennamen: am Kunden hinterlegt, sonst gleicher Name in Lexware */
+/** Kontakt-ID zum Kundennamen: am Kunden hinterlegt, sonst nur bei eindeutigem Treffer (finde() in kern/kunden.js) */
 function kontaktZu(name, gesetzt) {
   if (gesetzt) return gesetzt;
-  const n = (name ?? '').trim().toLowerCase();
-  return stand.kontakte.find((k) => k.name.trim().toLowerCase() === n)?.id ?? null;
+  return kontaktIdFuer(zustand.aktuell(), name, stand.kontakte);
+}
+
+/**
+ * Kunden mit den Lexware-Kontakten verknüpfen – nur was eindeutig ist (Auflage vom 22.11.2026). Alles andere bleibt
+ * unverknüpft und steht unter Kunden zur Bestätigung. Mit Beispieldaten gegen erfundene Kontakte.
+ */
+export async function kundenZuordnen() {
+  const liste = kontakte();
+  if (!liste.length) return [];
+  const probe = zuordnungPruefen(zustand.aktuell(), liste);
+  if (probe.some((z) => z.zustand === 'gesetzt')) await zustand.aendern((x) => { zuordnen(x, liste); });
+  return probe;
 }
 
 async function auftragAblegen(art, daten, bezug) {
@@ -147,7 +163,7 @@ export async function ergebnissePruefen() {
         const s = await github.dateiHolen(`${ORDNER}/status.json`);
         if (s) stand.status = JSON.parse(s);
         const k = await github.dateiHolen(`${ORDNER}/kontakte.json`);
-        if (k) { const j = JSON.parse(k); stand.kontakte = j.kontakte ?? []; stand.kontakteAbgeholt = j.abgeholt ?? null; }
+        if (k) { const j = JSON.parse(k); stand.kontakte = j.kontakte ?? []; stand.kontakteAbgeholt = j.abgeholt ?? null; await kundenZuordnen(); }
         await zahlungenLesen();
       } catch { /* beim nächsten Abgleich */ }
     } else if (a.bezug.typ === 'zahlungen') {

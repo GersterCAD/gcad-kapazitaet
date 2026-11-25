@@ -145,6 +145,19 @@ export function beispielDaten() {
 }
 
 /** Beispiel für den Zahlungsstand aus Lexware Office (wie lexware/zahlungen.json), Namen und Beträge erfunden */
+/** Erfundene Lexware-Kontakte für die Beispieldaten: genau, mit Rechtsform, nur das erste Wort, fehlt */
+export function beispielKontakte() {
+  return [
+    { id: 'b0000000-0000-4000-8000-000000000001', name: 'Beispiel Bau GmbH', nummer: 10001 },
+    { id: 'b0000000-0000-4000-8000-000000000002', name: 'Kanzlei Muster GbR', nummer: 10002 },
+    { id: 'b0000000-0000-4000-8000-000000000003', name: 'Gasthaus Beispiel Gastronomie GmbH', nummer: 10003 },
+    { id: 'b0000000-0000-4000-8000-000000000004', name: 'Muster AG', nummer: 10004 },
+    { id: 'b0000000-0000-4000-8000-000000000005', name: 'Rösterei am Markt', nummer: 10005 },
+    { id: 'b0000000-0000-4000-8000-000000000006', name: 'Schreinerei Beispiel', nummer: 10006 },
+    { id: 'b0000000-0000-4000-8000-000000000007', name: 'Laden Beispiel e.K.', nummer: 10007 },
+  ];
+}
+
 export function beispielZahlungen() {
   const r = (id, nummer, status, kunde, datum, faellig, gesamt, offen, geaendert, art = 'rechnung') => ({ id: `beispiel-${id}`, nummer, art, status, kunde, datum, faellig, gesamt, offen, geaendert });
   return [

@@ -9,6 +9,7 @@ import { ausText, tagKurz } from '../kern/datum.js';
 import { statusChip, planChip } from './projekt.js';
 import { startKnopf } from './zeitstopper.js';
 import * as stoppuhr from '../stoppuhr.js';
+import { projekteUnterseiten } from './kunden.js';
 
 const FILTER = [
   { id: 'aktiv', name: 'Aktiv', status: ['auftrag', 'laeuft', 'pausiert'] },
@@ -33,6 +34,7 @@ export function projektliste() {
         el('div', { class: 'label' }, 'Projekte'),
         el('h1', {}, 'Alle Projekte'),
       ]),
+      projekteUnterseiten('projekte'),
       el('a', { class: 'pille haupt', href: '#/projekte/neu' }, [plusIcon(), 'Projekt anlegen']),
     ]),
     el('div', { class: 'umschalter', role: 'group', 'aria-label': 'Projekte filtern' }, FILTER.map((x) =>

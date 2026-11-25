@@ -153,7 +153,12 @@ Reihenfolge: 1. Nachtrag beim Timer + Wochenstart/-abschluss · 2. Zahlungen aus
 
 ## Index B nachziehen (ab 21.11.2026)
 
-- Abgleich aller Boards: `03_Design/26-11-21_Index-B_Stand-der-Umsetzung.pdf` (Arbeitsliste in 8 Schritten, 30 offene Fragen). A8 Kunden erst, wenn echte Lexware-Kontakte durchgelaufen sind (Kundennummer aus `roles.customer.number`): Kundenstamm = Lexware, je Kunde Lexware-`id` und Kundennummer, in der App nur der Stundensatz.
+- Abgleich aller Boards: `03_Design/26-11-21_Index-B_Stand-der-Umsetzung.pdf` (Arbeitsliste in 8 Schritten, 30 offene Fragen).
+- **A8 Kunden** (`js/kern/kunden.js`, `js/ansichten/kunden.js`, `#/kunden`, Umschalter Projekte · Kunden): Kundenstamm = Lexware. Kunde `{ id, name, stundensatz, nummer, lexwareKontaktId }`, Nummer und ID immer zusammen, Name aus Lexware. In der App nur der Stundensatz. **Keine Anschrift** (Joachims Entscheidung 22.11.2026, auch nicht später), stattdessen Link auf den Kontakt (`lexware.link('kontakt', id)`). Die Action bleibt unverändert.
+  - `finde()` ist eine **genaue Übertragung** von `finde()` aus `20_GersterCAD/90_CAM-Scripts/gcad_kunden.py`: 1 ID, 2 Kundennummer, 3 Name genau, 4 `schluesselform()` (ohne Rechtsform/Umlaute/Satzzeichen), 5 erstes Wort nur als Vorschlag. Ändert sich die Python-Regel, hier gleich nachziehen. `zuordnen()` verknüpft nur bei „treffer“ (läuft in `lexware.kundenZuordnen()` nach jedem Lesen von `kontakte.json`), sonst Vorschlag zur Bestätigung (`bestaetigen()` über die Kundennummer). Neue Kunden-ID aus Lexware: `k-<lexwareId>` (gleich auf jedem Gerät).
+  - Projekte und Angebote hängen über den Namen am Kunden (kein `kundeId`, Abweichung dokumentiert). `verknuepfen()` stellt den Namen überall um und legt zwei Schreibweisen desselben Kontakts zusammen.
+  - Beim Senden an Lexware: `kontaktIdFuer()` nur bei eindeutigem Treffer, sonst Name ohne Kontakt.
+  - Beispieldaten: `beispielKontakte()` (erfunden), `lexware.kontakte()` liefert sie bei Beispieldaten.
 - **Verkaufte Stunden** (`verkaufteStunden()` in `js/kern/angebot.js`): geplante Stunden der übernommenen Angebotspositionen + vergütete Nachträge und Regie. Projektformular: „Summe x h“ und Chip „x h über Angebot“, darunter immer die Herkunft „verkauft x h = Angebot … + Nachträge … + Regie …“ (`verkaufteStundenTeile()`, Auflage 22.11.2026; Abweichung vom Board, dokumentiert).
 - **Zeitstopper gestoppt nach Timer.dc**: „Gebucht“, Spanne, „Gemessen … gerundet auf …“, Rückgängig, Bearbeiten (`eintragAendern()` in `js/kern/timer.js`, nicht bei abgerechneten Einträgen), Neu starten. Notizfeld im Zustand bereit.
 - iPhone: keine Timer-Leiste, wo `.mobil-aktion` steht (`js/app.js`).

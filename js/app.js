@@ -8,6 +8,7 @@ import { uebersicht } from './ansichten/uebersicht.js';
 import { kalenderSeite, kalenderVergessen } from './ansichten/kalender.js';
 import { anfrageSeite, anfrageKopf, anfrageVergessen } from './ansichten/anfrage.js';
 import { projektliste } from './ansichten/projekte.js';
+import { kundenSeite } from './ansichten/kunden.js';
 import { abrechnungOffen, rechnungenListe, rechnungSeite, rechnungKopf, rechnungVergessen, unterseiten } from './ansichten/abrechnung.js';
 import { einnahmenSeite } from './ansichten/einnahmen.js';
 import { planspielSeite } from './ansichten/planspiel.js';
@@ -53,6 +54,7 @@ const ANSICHTEN = {
     kontext: 'Projekte',
     inhalt: projektliste(),
   }),
+  kunden: () => ({ bereich: 'projekte', titel: 'Kunden', kontext: 'Kunden', inhalt: kundenSeite() }),
   'projekte/neu': () => ({
     bereich: 'projekte',
     titel: 'Neues Projekt', zurueck: '#/projekte',

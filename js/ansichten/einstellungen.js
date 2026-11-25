@@ -503,7 +503,7 @@ function lexwareKarte(d) {
     type: 'button', class: 'pille', disabled: !github.verbunden() || zustand.istBeispiel() || !!prueft, 'data-fokus': 'lx-pruefen',
     onclick: async () => { try { await lexware.pruefen(); } catch (f) { meldung.textContent = f.message; } },
   }, prueft ? 'Wird geprüft …' : 'Verbindung prüfen');
-  const verknuepft = (d.kunden ?? []).filter((k) => k.lexwareKontaktId || lx.kontakte.some((c) => c.name.trim().toLowerCase() === k.name.trim().toLowerCase())).length;
+  const verknuepft = (d.kunden ?? []).filter((k) => k.lexwareKontaktId).length;
   const zeile = (l, w) => el('div', { class: 'summenzeile linie-unten' }, [el('span', { class: 'sekundaer' }, l), el('span', { class: 'zahl' }, w)]);
   const zuletzt = lx.zuletzt ? `${zeitText(lx.zuletzt.zeit)} · ${lx.zuletzt.art === 'rechnung' ? 'Rechnung' : lx.zuletzt.art === 'angebot' ? 'Angebot' : 'Prüfung'}${lx.zuletzt.ok ? '' : ' (Fehler)'}` : '–';
 

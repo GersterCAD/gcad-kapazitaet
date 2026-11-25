@@ -941,3 +941,31 @@ a.nk-zeile:hover { color: var(--text); background: var(--leiste); }
 
 /* Zeitstopper gestoppt (Timer.dc.html): gebuchte Spanne groß */
 .timer-spanne { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
+
+/* ---------- Kunden (Kunden.dc.html) ---------- */
+.kunden-raster { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+.kunden-liste { flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.kunden-detail { flex: 2 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.kunden-knopf { display: flex; align-items: center; gap: 16px; min-height: 64px; padding: 12px 16px; border: 0; border-radius: var(--radius-karte); background: var(--leiste); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.kunden-knopf[aria-pressed="true"] { background: var(--weiss); box-shadow: inset 0 0 0 1.5px var(--text); }
+.kunden-knopf .zeile-titel { font-size: 14px; font-weight: 600; }
+.kunden-knopf .fuellung { min-width: 0; }
+.kunden-knopf .rechts .fett { font-size: 14px; }
+.kunden-klein { font-size: 12px; color: var(--text-2); }
+.kunden-knopf .kunden-klein { font-size: 11px; }
+.knopfreihe.oben { align-items: flex-start; flex-wrap: wrap; }
+.kunden-name { min-width: 240px; }
+.kunden-titel { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.kunden-unter { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+.chip-mit-haken { display: inline-flex; align-items: center; gap: 6px; padding-left: 8px; }
+.stapel.eng { gap: 8px; }
+.kunden-kennzahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 16px; margin-top: 24px; }
+.kunden-satz { height: 44px; font-size: 15px; font-weight: 600; text-align: right; }
+.kunden-wert { font-size: 20px; font-weight: 600; margin-top: 8px; }
+.beleg-zeile { display: flex; align-items: center; gap: 16px; min-height: 52px; border-bottom: 1px solid var(--leiste); font-size: 13px; flex-wrap: wrap; }
+.beleg-nr { width: 88px; }
+.beleg-titel { flex: 1; min-width: 160px; }
+.beleg-datum { width: 72px; }
+.beleg-betrag { width: 110px; text-align: right; }
+.beleg-status { width: 140px; }
+.beleg-leer { margin: 0; padding: 24px 0; font-size: 13px; color: var(--text-2); }
